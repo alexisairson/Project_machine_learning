@@ -243,7 +243,6 @@ class LearningProcess:
         else:
             return self.model.get_state_dict()
 
-
 # ==========================================================
 #       PHYSICS MODEL (ORANGE) - REPLACEABLE MODULE
 #  Contains: water_drag, thrust_coeff, angle_speed, max_angle
@@ -656,36 +655,42 @@ class Environment:
 
 
 class TrainingSession:
+    
     """
     Training session manager.
     Handles the training loop and checkpointing.
     """
     
     def __init__(self, env, episodes=300, checkpoint_interval=20):
-        self.env = env
-        self.episodes = episodes
+        
+        self.env                 = env
+        self.episodes            = episodes
         self.checkpoint_interval = checkpoint_interval
+        
         self.checkpoints = []
         self.best_distance = -float('inf')
         self.best_trajectory = []
     
     def run(self):
+        
         """Run training loop."""
         print("=" * 60)
         print("TRAINING AQUATIC CREATURE V9 (Modular Architecture)")
         print("=" * 60)
         
         learning = self.env.active_learning
-        use_nn = learning.use_neural_network
+        use_nn   = learning.use_neural_network
         
         print(f"Using {'NEURAL NETWORK' if use_nn else 'TABULAR'} Q-learning")
         
         for ep in range(self.episodes + 1):
-            state = self.env.reset()
-            epsilon = learning.get_epsilon(ep, self.episodes)
+            
+            state        = self.env.reset()
+            epsilon      = learning.get_epsilon(ep, self.episodes)
             max_distance = 0
             
             for step in range(self.env.max_steps):
+                
                 # Select action via learning process
                 action = learning.select_action(state, epsilon)
                 
@@ -707,14 +712,11 @@ class TrainingSession:
             
             # Save checkpoint
             if ep % self.checkpoint_interval == 0:
-                checkpoint = TrainingCheckpoint(
-                    episode=ep,
-                    model_state=learning.get_model_state(),
-                    trajectory=copy.deepcopy(self.best_trajectory),
-                    max_distance=self.best_distance,
-                    use_nn=use_nn,
-                    num_segments=self.env.creature.num_segments
-                )
+                
+                checkpoint = TrainingCheckpoint(episode=ep, model_state=learning.get_model_state(),
+                                                trajectory=copy.deepcopy(self.best_trajectory), max_distance=self.best_distance,
+                                                use_nn=use_nn, num_segments=self.env.creature.num_segments)
+                
                 self.checkpoints.append(checkpoint)
                 print(f"Ep {ep:3d} | Best: {self.best_distance:6.1f}m | Segs: {self.env.creature.num_segments}")
         
