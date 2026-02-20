@@ -71,116 +71,109 @@ class TabularQ:
 # ==========================================================
 # 3. Aquatic Creature
 # ==========================================================
-# class AquaticCreature:
-#     def __init__(self, num_segments=5, max_segments=10, min_segments=2):
-#         self.num_segments = num_segments
-#         self.max_segments = max_segments
-#         self.min_segments = min_segments
+class AquaticCreature:
+
+    def __init__(self, num_segments=5, max_segments=10, min_segments=2):
         
-#         self.segment_length = 15.0
-#         self.angles = np.zeros(max_segments, dtype=np.float64)
-#         self.target_angles = np.zeros(max_segments, dtype=np.float64)
+        self.num_segments = num_segments
+        self.max_segments = max_segments
+        self.min_segments = min_segments
         
-#         self.head_pos = np.array([0.0, 0.0], dtype=np.float64)
-#         self.head_vel = np.array([0.0, 0.0], dtype=np.float64)
+        self.segment_length = 10.0
+        self.angles = np.zeros(max_segments, dtype=np.float64)
+        self.target_angles = np.zeros(max_segments, dtype=np.float64)
         
-#         # V8 Tuning: Better physics
-#         self.water_drag = 0.05        # Reduced drag
-#         self.thrust_coefficient = 3.5 # Increased thrust
-#         self.angle_speed = 0.4        # Faster reaction
-#         self.max_angle = 1.2
+        self.head_pos = np.array([0.0, 0.0], dtype=np.float64)
+        self.head_vel = np.array([0.0, 0.0], dtype=np.float64)
         
-#     def reset(self, x=0.0, y=0.0, initial_angle=0.0):
-#         self.angles = np.zeros(self.max_segments, dtype=np.float64)
-#         self.target_angles = np.zeros(self.max_segments, dtype=np.float64)
-#         for i in range(self.num_segments):
-#             self.angles[i] = initial_angle
-#             self.target_angles[i] = initial_angle
-#         self.head_pos = np.array([x, y], dtype=np.float64)
-#         self.head_vel = np.array([0.0, 0.0], dtype=np.float64)
-    
-#     def get_joint_positions(self):
-#         positions = [self.head_pos.copy()]
-#         cum_angle = 0.0
-#         for i in range(self.num_segments):
-#             cum_angle += self.angles[i]
-#             prev = positions[-1]
-#             new_x = prev[0] - self.segment_length * math.cos(cum_angle)
-#             new_y = prev[1] - self.segment_length * math.sin(cum_angle)
-#             positions.append(np.array([new_x, new_y]))
-#         return positions
-    
-#     def set_target_angle(self, segment_idx, angle):
-#         if 0 <= segment_idx < self.num_segments:
-#             self.target_angles[segment_idx] = np.clip(angle, -self.max_angle, self.max_angle)
-    
-#     def add_segment(self):
-#         if self.num_segments < self.max_segments:
-#             self.num_segments += 1
-#             return True
-#         return False
-    
-#     def remove_segment(self):
-#         if self.num_segments > self.min_segments:
-#             self.num_segments -= 1
-#             return True
-#         return False
-    
-#     def get_body_size_factor(self):
-#         return 1.0 + (self.num_segments - 2) * 0.25
-    
-#     def update(self, dt):
-#         old_angles = self.angles.copy()
+        # V8 Tuning: Better physics
+        self.water_drag = 0.05        # Reduced drag
+        self.thrust_coefficient = 3.5 # Increased thrust
+        self.angle_speed = 0.4        # Faster reaction
+        self.max_angle = 1.2
         
-#         for i in range(self.num_segments):
-#             diff = self.target_angles[i] - self.angles[i]
-#             self.angles[i] += diff * self.angle_speed
+    def reset(self, x=0.0, y=0.0, initial_angle=0.0):
         
-#         thrust = np.array([0.0, 0.0])
-        
-#         for i in range(self.num_segments):
-#             angle_change = self.angles[i] - old_angles[i]
+        self.angles        = np.zeros(self.max_segments, dtype=np.float64)
+        self.target_angles = np.zeros(self.max_segments, dtype=np.float64)
+
+        for i in range(self.num_segments):
+            self.angles[i] = initial_angle
+            self.target_angles[i] = initial_angle
             
-#             if abs(angle_change) > 0.001:
-#                 cum_angle = sum(self.angles[:i+1])
-#                 seg_dir = np.array([math.cos(cum_angle), math.sin(cum_angle)])
-#                 perp_dir = np.array([-seg_dir[1], seg_dir[0]])
-                
-#                 position_factor = (i + 1) / self.num_segments
-#                 thrust_mag = abs(angle_change) * self.thrust_coefficient * position_factor
-                
-#                 thrust += thrust_mag * perp_dir * np.sign(angle_change)
-#                 thrust[0] += thrust_mag * 0.5 * seg_dir[0]
-        
-#         self.head_vel += thrust * dt
-        
-#         speed = np.linalg.norm(self.head_vel)
-#         if speed > 0.001:
-#             drag = -self.water_drag * self.head_vel * speed
-#             self.head_vel += drag * dt
-        
-#         self.head_pos += self.head_vel * dt
+        self.head_pos = np.array([x, y], dtype=np.float64)
+        self.head_vel = np.array([0.0, 0.0], dtype=np.float64)
     
-#     def get_head_position(self):
-#         return self.head_pos.copy()
+    def set_target_angle(self, segment_idx, angle):
+        if 0 <= segment_idx < self.num_segments:
+            self.target_angles[segment_idx] = np.clip(angle, -self.max_angle, self.max_angle)
     
-#     def get_state(self, max_segments):
-#         angles_sin = np.sin(self.angles[:self.num_segments])
-#         angles_cos = np.cos(self.angles[:self.num_segments])
-#         angle_errors = (self.target_angles[:self.num_segments] - self.angles[:self.num_segments]) / self.max_angle
+    def add_segment(self):
+        if self.num_segments < self.max_segments:
+            self.num_segments += 1
+            return True
+        return False
+    
+    def remove_segment(self):
+        if self.num_segments > self.min_segments:
+            self.num_segments -= 1
+            return True
+        return False
+    
+    def get_body_size_factor(self):
+        return 1.0 + (self.num_segments - 2) * 0.25
+    
+    def update(self, dt):
+        old_angles = self.angles.copy()
         
-#         pad_size = max_segments - self.num_segments
-#         angles_sin = np.pad(angles_sin, (0, pad_size))
-#         angles_cos = np.pad(angles_cos, (0, pad_size))
-#         angle_errors = np.pad(angle_errors, (0, pad_size))
+        for i in range(self.num_segments):
+            diff = self.target_angles[i] - self.angles[i]
+            self.angles[i] += diff * self.angle_speed
         
-#         return np.concatenate([
-#             angles_sin,
-#             angles_cos,
-#             angle_errors,
-#             self.head_vel / 10.0,
-#             [self.num_segments / max_segments]
-#         ]).astype(np.float32)
+        thrust = np.array([0.0, 0.0])
+        
+        for i in range(self.num_segments):
+            angle_change = self.angles[i] - old_angles[i]
+            
+            # Non neglectable change
+            if abs(angle_change) > 0.001:
+                cum_angle = sum(self.angles[:i+1])
+                seg_dir = np.array([math.cos(cum_angle), math.sin(cum_angle)])
+                perp_dir = np.array([-seg_dir[1], seg_dir[0]])
+                
+                # Segments closer to the tail (higher i) contribute more thrust
+                position_factor = (i + 1) / self.num_segments
+                thrust_mag = abs(angle_change) * self.thrust_coefficient * position_factor
+                
+                thrust += thrust_mag * perp_dir * np.sign(angle_change)
+                thrust[0] += thrust_mag * 0.5 * seg_dir[0] # This rewards for progressing in the right direction
+        
+        self.head_vel += thrust * dt
+        
+        # Water resistance
+        speed = np.linalg.norm(self.head_vel)
+        if speed > 0.001:
+            drag = -self.water_drag * self.head_vel * speed
+            self.head_vel += drag * dt
+        
+        self.head_pos += self.head_vel * dt
+    
+    def get_head_position(self):
+        return self.head_pos.copy()
+    
+    def get_state(self, max_segments):
+        
+        angles_sin = np.sin(self.angles[:self.num_segments])
+        angles_cos = np.cos(self.angles[:self.num_segments])
+        angle_errors = (self.target_angles[:self.num_segments] - self.angles[:self.num_segments]) / self.max_angle
+        
+        pad_size = max_segments - self.num_segments
+        angles_sin = np.pad(angles_sin, (0, pad_size))
+        angles_cos = np.pad(angles_cos, (0, pad_size))
+        angle_errors = np.pad(angle_errors, (0, pad_size))
+        
+        return np.concatenate([angles_sin, angles_cos, angle_errors,
+                               self.head_vel / 10.0, [self.num_segments / max_segments]]).astype(np.float32)
 
 # ==========================================================
 # 4. Environment
@@ -189,7 +182,7 @@ class AquaticEnv:
     
     def __init__(self,
                  num_segments=5, max_segments=10, min_segments=2, fixed_segments=True,
-                 target_angle_deg=0.0, simulation_duration=10.0, dt=0.01):
+                 target_angle_deg=0.0, simulation_duration=30.0, dt=0.01):
         
         self.initial_segments = num_segments
         self.max_segments     = max_segments if not fixed_segments else num_segments
@@ -212,6 +205,7 @@ class AquaticEnv:
         self.reset()
     
     def reset(self):
+        
         self.creature = AquaticCreature(self.initial_segments, self.max_segments, self.min_segments)
         self.creature.reset(0.0, 0.0, self.target_angle_rad)
         
@@ -220,10 +214,12 @@ class AquaticEnv:
         
         self.step_count = 0
         self.start_pos = self.creature.get_head_position().copy()
+        
         self.trajectory = [{'pos': self.start_pos.copy(), 
                            'angles': self.creature.angles[:self.creature.num_segments].copy(),
                            'num_segments': self.creature.num_segments,
                            'energy': self.energy}]
+    
         return self.get_state()
     
     def get_state_dim(self):
@@ -241,87 +237,95 @@ class AquaticEnv:
         delta = pos - self.start_pos
         return np.dot(delta, self.direction_vector)
     
-    # def step(self, action):
-    #     segment_idx = action // 3
-    #     action_type = action % 3
+    def step(self, action):
         
-    #     size_factor = self.creature.get_body_size_factor()
-    #     energy_cost = 0.0
-    #     segment_changed = None
+        segment_idx = action // 3
+        action_type = action % 3
         
-    #     if not self.fixed_segments:
-    #         add_action = self.max_segments * 3
-    #         remove_action = self.max_segments * 3 + 1
+        size_factor = self.creature.get_body_size_factor()
+        energy_cost = 0.0
+        segment_changed = None
+        
+        # If adding a member is possible...
+        if not self.fixed_segments:
+            add_action = self.max_segments * 3
+            remove_action = self.max_segments * 3 + 1
             
-    #         if action == add_action:
-    #             if self.creature.add_segment():
-    #                 segment_changed = ("ADD", self.creature.num_segments)
-    #                 energy_cost = 3.0 * size_factor
-    #                 self.max_energy = self.base_energy * size_factor
-    #                 self.energy = min(self.energy, self.max_energy)
-    #         elif action == remove_action:
-    #             if self.creature.remove_segment():
-    #                 segment_changed = ("REMOVE", self.creature.num_segments)
-    #                 energy_cost = 1.5 * size_factor
-    #                 self.max_energy = self.base_energy * self.creature.get_body_size_factor()
-    #                 self.energy = min(self.energy, self.max_energy)
-    #         elif segment_idx < self.creature.num_segments:
-    #             current_target = self.creature.target_angles[segment_idx]
-    #             if action_type == 0:
-    #                 self.creature.set_target_angle(segment_idx, current_target + 0.2)
-    #                 energy_cost = 0.03 * size_factor # Reduced cost
-    #             elif action_type == 1:
-    #                 self.creature.set_target_angle(segment_idx, current_target - 0.2)
-    #                 energy_cost = 0.03 * size_factor
-    #     else:
-    #         if segment_idx < self.creature.num_segments:
-    #             current_target = self.creature.target_angles[segment_idx]
-    #             if action_type == 0:
-    #                 self.creature.set_target_angle(segment_idx, current_target + 0.2)
-    #                 energy_cost = 0.03 * size_factor
-    #             elif action_type == 1:
-    #                 self.creature.set_target_angle(segment_idx, current_target - 0.2)
-    #                 energy_cost = 0.03 * size_factor
+            # Add a member
+            if action == add_action:
+                if self.creature.add_segment():
+                    segment_changed = ("ADD", self.creature.num_segments)
+                    energy_cost = 3.0 * size_factor
+                    self.max_energy = self.base_energy * size_factor
+                    self.energy = min(self.energy, self.max_energy)
+    
+            # Remove a member
+            elif action == remove_action:
+                if self.creature.remove_segment():
+                    segment_changed = ("REMOVE", self.creature.num_segments)
+                    energy_cost = 1.5 * size_factor
+                    self.max_energy = self.base_energy * self.creature.get_body_size_factor()
+                    self.energy = min(self.energy, self.max_energy)
+    
+            # Move a member
+            elif segment_idx < self.creature.num_segments:
+                current_target = self.creature.target_angles[segment_idx]
+                
+                # Increase angle
+                if action_type == 0:
+                    self.creature.set_target_angle(segment_idx, current_target + 0.2)
+                    energy_cost = 0.03 * size_factor # Reduced cost
+                
+                # Decrease angle    
+                elif action_type == 1:
+                    self.creature.set_target_angle(segment_idx, current_target - 0.2)
+                    energy_cost = 0.03 * size_factor
+        else:
+    
+            if segment_idx < self.creature.num_segments:
+                current_target = self.creature.target_angles[segment_idx]
+    
+                # Increase angle
+                if action_type == 0:
+                    self.creature.set_target_angle(segment_idx, current_target + 0.2)
+                    energy_cost = 0.03 * size_factor
+    
+                # Decrease angle
+                elif action_type == 1:
+                    self.creature.set_target_angle(segment_idx, current_target - 0.2)
+                    energy_cost = 0.03 * size_factor
         
-    #     # Update physics
-    #     substeps = 4 # More substeps for stability
-    #     for _ in range(substeps):
-    #         self.creature.update(self.dt / substeps)
+        # Update physics
+        substeps = 5 # More substeps for stability
+        for _ in range(substeps):
+            self.creature.update(self.dt / substeps)
         
-    #     # Metabolism cost reduced
-    #     metabolism = 0.002 * size_factor
-    #     self.energy -= (energy_cost + metabolism)
-    #     self.energy = max(0, self.energy)
+        # Metabolism cost reduced
+        metabolism = 0.002 * size_factor # Continuous cost to stay alive
+        self.energy -= (energy_cost + metabolism)
+        self.energy = max(0, self.energy)
         
-    #     head_pos = self.creature.get_head_position()
-    #     self.trajectory.append({
-    #         'pos': head_pos.copy(),
-    #         'angles': self.creature.angles[:self.creature.num_segments].copy(),
-    #         'num_segments': self.creature.num_segments,
-    #         'energy': self.energy
-    #     })
+        head_pos = self.creature.get_head_position()
+        self.trajectory.append({'pos': head_pos.copy(), 'angles': self.creature.angles[:self.creature.num_segments].copy(),
+                                'num_segments': self.creature.num_segments, 'energy': self.energy})
         
-    #     # V8 Enhanced Reward Function
-    #     distance = self.get_distance(head_pos)
+        # V8 Enhanced Reward Function
+        distance = self.get_distance(head_pos) # From the starting point
         
-    #     # Velocity alignment reward
-    #     vel = self.creature.head_vel
-    #     speed = np.linalg.norm(vel)
-    #     vel_dir = vel / (speed + 1e-6)
-    #     alignment = np.dot(vel_dir, self.direction_vector)
+        # Velocity alignment reward
+        vel = self.creature.head_vel
+        speed = np.linalg.norm(vel)
+        vel_dir = vel / (speed + 1e-6)
+        alignment = np.dot(vel_dir, self.direction_vector)
         
-    #     # Reward is mainly moving fast in the right direction
-    #     reward = (alignment * speed * 0.5) + (distance * 0.05) - (energy_cost * 0.005)
+        # Reward is mainly moving fast in the right direction
+        reward = (alignment * speed * 0.5) + (distance * 0.05) - (energy_cost * 0.005)
         
-    #     self.step_count += 1
-    #     done = self.step_count >= self.max_steps or self.energy <= 0
+        self.step_count += 1
+        done = self.step_count >= self.max_steps or self.energy <= 0
         
-    #     return self.get_state(), float(-reward), done, {
-    #         'distance': distance,
-    #         'segment_changed': segment_changed,
-    #         'num_segments': self.creature.num_segments,
-    #         'speed': speed
-    #     }
+        dic = {'distance': distance, 'segment_changed': segment_changed, 'num_segments': self.creature.num_segments, 'speed': speed}
+        return self.get_state(), float(-reward), done, dic
 
 # ==========================================================
 # 5. Training
@@ -336,24 +340,21 @@ class TrainingCheckpoint:
         self.use_nn = use_nn
         self.num_segments = num_segments
         
-def train_with_checkpoints(episodes=200, checkpoint_interval=20,
-                          target_angle_deg=0.0, simulation_duration=10.0,
-                          use_neural_network=True, num_segments=5, fixed_segments=True):
-    env = AquaticEnv(
-        num_segments=num_segments,
-        target_angle_deg=target_angle_deg,
-        simulation_duration=simulation_duration,
-        fixed_segments=fixed_segments
-    )
+def train_with_checkpoints(episodes=300, checkpoint_interval=20,
+                          target_angle_deg=0.0, simulation_duration=30.0,
+                          use_neural_network=False, num_segments=5, fixed_segments=True):
     
-#     if use_neural_network:
-#         model = QNetwork(env.get_state_dim(), env.get_action_dim())
-#         optimizer = optim.Adam(model.parameters(), lr=0.001)
-#         print("Using NEURAL NETWORK for Q-estimation")
-#     else:
-#         model = TabularQ(env.get_state_dim(), env.get_action_dim())
-#         optimizer = None
-#         print("Using TABULAR Q-learning")
+    env = AquaticEnv(num_segments=num_segments, fixed_segments=fixed_segments,
+                     target_angle_deg=target_angle_deg, simulation_duration=simulation_duration)
+    
+    if use_neural_network:
+        model = QNetwork(env.get_state_dim(), env.get_action_dim())
+        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        print("Using NEURAL NETWORK for Q-estimation")
+    else:
+        model = TabularQ(env.get_state_dim(), env.get_action_dim())
+        optimizer = None
+        print("Using TABULAR Q-learning")
     
     checkpoints = []
     best_distance = -float('inf')
@@ -363,74 +364,74 @@ def train_with_checkpoints(episodes=200, checkpoint_interval=20,
     print("TRAINING AQUATIC CREATURE V8")
     print("=" * 60)
     
-#     for ep in range(episodes + 1):
-#         state = env.reset()
-#         epsilon = max(0.05, 1.0 - (ep / episodes) * 0.95)
-#         max_distance = 0
-        
-#         for step in range(env.max_steps):
-#             if random.random() < epsilon:
-#                 action = random.randint(0, env.get_action_dim() - 1)
-#             else:
-#                 if use_neural_network:
-#                     with torch.no_grad():
-#                         state_tensor = torch.from_numpy(state)
-#                         q_values = model(state_tensor)
-#                         action = torch.argmin(q_values).item()
-#                 else:
-#                     q_values = model.get_q_values(state)
-#                     action = int(np.argmin(q_values))
-            
-#             next_state, cost, done, info = env.step(action)
-#             max_distance = max(max_distance, info['distance'])
-            
-#             if use_neural_network:
-#                 with torch.no_grad():
-#                     q_next = model(torch.from_numpy(next_state))
-#                     target = cost + 0.95 * torch.min(q_next).item()
-                
-#                 current_q = model(torch.from_numpy(state))[action]
-#                 loss = nn.MSELoss()(current_q, torch.tensor(target, dtype=torch.float32))
-                
-#                 optimizer.zero_grad()
-#                 loss.backward()
-#                 # V8: Gradient clipping for stability
-#                 nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-#                 optimizer.step()
-#             else:
-#                 q_next = model.get_q_values(next_state)
-#                 target = cost + 0.95 * np.min(q_next)
-#                 model.update(state, action, target)
-            
-#             state = next_state
-#             if done:
-#                 break
-        
-#         if max_distance > best_distance:
-#             best_distance = max_distance
-#             best_trajectory = copy.deepcopy(env.trajectory)
-        
-#         if ep % checkpoint_interval == 0:
-#             if use_neural_network:
-#                 model_state = model.state_dict()
-#             else:
-#                 model_state = model.get_state_dict()
-            
-#             checkpoint = TrainingCheckpoint(
-#                 episode=ep,
-#                 model_state=model_state,
-#                 trajectory=copy.deepcopy(best_trajectory),
-#                 max_distance=best_distance,
-#                 use_nn=use_neural_network,
-#                 num_segments=num_segments
-#             )
-#             checkpoints.append(checkpoint)
-#             print(f"Ep {ep:3d} | Max dist: {max_distance:6.1f}m | Best: {best_distance:6.1f}m")
+    for ep in range(episodes + 1):
     
-#     print("-" * 60)
-#     print(f"Done! {len(checkpoints)} checkpoints saved.")
+        state        = env.reset()
+        epsilon      = max(0.05, 1.0 - (ep / episodes) * 0.95)
+        max_distance = 0
+        
+        for step in range(env.max_steps):
     
-#     return model, checkpoints
+            if random.random() < epsilon:
+                action = random.randint(0, env.get_action_dim() - 1)
+            else:
+                if use_neural_network:
+                    with torch.no_grad():
+                        state_tensor = torch.from_numpy(state)
+                        q_values = model(state_tensor)
+                        action = torch.argmin(q_values).item()
+                else:
+                    q_values = model.get_q_values(state)
+                    action = int(np.argmin(q_values))
+            
+            next_state, cost, done, info = env.step(action)
+            max_distance = max(max_distance, info['distance'])
+            
+            if use_neural_network:
+                with torch.no_grad():
+                    q_next = model(torch.from_numpy(next_state))
+                    target = cost + 0.95 * torch.min(q_next).item()
+                
+                current_q = model(torch.from_numpy(state))[action]
+                loss = nn.MSELoss()(current_q, torch.tensor(target, dtype=torch.float32))
+                
+                optimizer.zero_grad()
+                loss.backward()
+                
+                # V8: Gradient clipping for stability
+                nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                optimizer.step()
+    
+            else:
+                q_next = model.get_q_values(next_state)
+                target = cost + 0.95 * np.min(q_next)
+                model.update(state, action, target)
+            
+            state = next_state
+            if done:
+                break
+        
+        if max_distance > best_distance:
+            best_distance = max_distance
+            best_trajectory = copy.deepcopy(env.trajectory)
+        
+        if ep % checkpoint_interval == 0:
+            if use_neural_network:
+                model_state = model.state_dict()
+            else:
+                model_state = model.get_state_dict()
+            
+            checkpoint = TrainingCheckpoint(episode=ep, model_state=model_state,
+                                            trajectory=copy.deepcopy(best_trajectory),
+                                            max_distance=best_distance, use_nn=use_neural_network,
+                                            num_segments=num_segments)
+            checkpoints.append(checkpoint)
+            print(f"Ep {ep:3d} | Best: {best_distance:6.1f}m | Segs: {num_segments}")
+    
+    print("-" * 60)
+    print(f"Done! {len(checkpoints)} checkpoints saved.")
+    
+    return model, checkpoints
 
 # ==========================================================
 # 6. Main Execution
@@ -471,9 +472,10 @@ if __name__ == "__main__":
     try:
         episodes = int(input("Episodes [300]: ").strip() or 300)
         duration = float(input("Episode duration (s) [30]: ").strip() or 30)
-        angle = float(input("Target direction (°) [0]: ").strip() or 0)
+        angle    = float(input("Target direction (°) [0]: ").strip() or 0)
+        checkpoint_interval = int(input("Checkpoint interval for simulation [20]: ").strip() or 20)
         
-        seg_choice = input("Fix number of segments? (y/n) [y]: ").strip().lower()
+        seg_choice = input("Fix number of segments? (y/n) [n]: ").strip().lower()
         fixed_segments = seg_choice != 'n'
         
         if fixed_segments:
@@ -489,15 +491,10 @@ if __name__ == "__main__":
         episodes, duration, angle, num_segments, fixed_segments, use_nn = 300, 30.0, 0.0, 5, True, True
     
     print()
-    model, checkpoints = train_with_checkpoints(
-        episodes=episodes,
-        checkpoint_interval=20,
-        target_angle_deg=angle,
-        simulation_duration=duration,
-        use_neural_network=use_nn,
-        num_segments=num_segments,
-        fixed_segments=fixed_segments
-    )
+    model, checkpoints = train_with_checkpoints(episodes=episodes, checkpoint_interval=checkpoint_interval,
+                                                target_angle_deg=angle, simulation_duration=duration,
+                                                use_neural_network=use_nn, num_segments=num_segments,
+                                                fixed_segments=fixed_segments)
     
     saved_file = save_simulation(checkpoints, use_nn, angle, duration, num_segments, fixed_segments)
     print(f"\nSimulation saved to: {saved_file}")
