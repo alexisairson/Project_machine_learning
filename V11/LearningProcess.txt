@@ -1,0 +1,22 @@
+# ==========================================================
+# LEARNING PROCESS CONFIGURATION
+# ==========================================================
+# This file configures the Q-learning parameters.
+# Students can modify these to experiment with learning
+# behavior and convergence properties.
+# ==========================================================
+
+# Learning rate for neural network optimizer
+# Range: 0.0001 - 0.01
+# Higher = faster learning, may be unstable
+learning_rate_nn = 0.001
+
+# Discount factor (gamma) for future rewards
+# Range: 0.8 - 0.99
+# Higher = more emphasis on long-term rewards
+gamma = 0.95
+
+# Minimum exploration rate (epsilon)
+# Range: 0.01 - 0.2
+# The epsilon-greedy strategy decays from 1.0 to this value
+epsilon_min = 0.05

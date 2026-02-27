@@ -1,0 +1,47 @@
+# ==========================================================
+# CREATURE CONFIGURATION
+# ==========================================================
+# ANGLE SEMANTICS:
+# - segment_angles[i] = orientation of segment i relative to base_orientation
+# - For N segments, there are N segment angles
+# - 0 = aligned with direction of movement (forward)
+# - Positive = counter-clockwise
+# - Negative = clockwise
+# ==========================================================
+
+# Length of each body segment
+segment_length = 3.0
+
+# Energy penalty factor per additional segment
+size_penalty_factor = 0.25
+
+# Whether the number of segments is fixed
+fixed_segments = true
+
+# Number of body segments (if fixed_segments = true)
+num_segments = 5
+
+# Minimum segments (if fixed_segments = false)
+min_segments = 2
+
+# Maximum segments (if fixed_segments = false)
+max_segments = 10
+
+# Target direction for movement in degrees
+target_angle_deg = 0
+
+# Maximum angle magnitude in degrees
+max_angle_deg = 180.0
+
+# Use neural network for learning
+use_nn = true
+
+# ==========================================================
+# ENERGY SYSTEM PARAMETERS
+# ==========================================================
+
+base_energy = 100.0
+energy_cost_angle_move = 0.03
+energy_cost_add_segment = 3.0
+energy_cost_remove_segment = 1.5
+metabolism_rate = 0.002

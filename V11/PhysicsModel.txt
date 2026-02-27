@@ -1,0 +1,41 @@
+# ==========================================================
+# PHYSICS MODEL CONFIGURATION
+# ==========================================================
+# This file configures the physics parameters for aquatic
+# propulsion simulation.
+#
+# ANGLE MODEL (V11):
+# - Each segment has an absolute angle in [0, 2π) (0 to 360°)
+# - Angles are measured counter-clockwise from base_orientation
+# - 0 = forward, π/2 = left, π = backward, 3π/2 = right
+#
+# PROPULSION MODEL:
+# - When a segment rotates, it sweeps a circular sector
+# - Swept area = (1/2) × L² × |dθ|
+# - Thrust is proportional to swept area
+#
+# DRAG MODEL:
+# - Drag depends on projected frontal area perpendicular to motion
+# - Segment aligned with velocity: low drag
+# - Segment perpendicular to velocity: high drag
+#
+# Note: Angle constraints are handled by the Creature class,
+# not during physics simulation.
+# ==========================================================
+
+# Base water drag coefficient
+# Range: 0.01 - 0.2
+water_drag = 0.005
+
+# Thrust coefficient for segment rotation propulsion
+# Range: 1.0 - 10.0
+# Higher = more thrust per rotation
+thrust_coefficient = 3.5
+
+# Speed at which segment angles approach their target values
+# Range: 0.1 - 1.0
+angle_speed = 0.4
+
+# Drag multiplier for projected frontal area
+# Range: 0.5 - 5.0
+drag_spread_factor = 1.0

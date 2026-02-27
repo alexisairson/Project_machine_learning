@@ -1,0 +1,28 @@
+# ==========================================================
+# ENVIRONMENT CONFIGURATION
+# ==========================================================
+# This file configures the simulation environment parameters.
+# These control the simulation duration and physics steps.
+# ==========================================================
+
+# Minimum number of body segments allowed
+# Range: 2 - 10
+min_segments = 2
+
+# Maximum number of body segments allowed
+# Range: 2 - 10
+max_segments = 10
+
+# Duration of each simulation episode in seconds
+# Range: 5.0 - 120.0
+duration_simulation = 30.0
+
+# Physics time step in seconds
+# Smaller = more accurate but slower
+# Range: 0.001 - 0.05
+dt = 0.01
+
+# Number of physics substeps per action step
+# Higher = more stable simulation
+# Range: 1 - 20
+substeps = 5

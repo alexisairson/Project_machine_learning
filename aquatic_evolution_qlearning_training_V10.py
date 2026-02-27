@@ -16,6 +16,7 @@ from datetime import datetime
 # ==========================================================
 
 class QNetwork(nn.Module):
+    
     """
     Neural network for Q-value approximation.
     Students can modify architecture for experimentation.
@@ -43,30 +44,27 @@ class QNetwork(nn.Module):
                 nn.init.xavier_uniform_(m.weight)
                 nn.init.zeros_(m.bias)
     
-    def forward(self, state):
-        return self.network(state)
-    
     def get_q_values(self, state):
         """Get Q-values for a given state."""
         with torch.no_grad():
             state_tensor = torch.from_numpy(state) if isinstance(state, np.ndarray) else state
-            return self.forward(state_tensor).numpy()
-    
-    def get_state_dict(self):
-        return self.state_dict()
-
+            return self.network(state_tensor).numpy()
 
 class QTabular:
+    
     """
     Tabular Q-learning with state discretization.
     Good for understanding Q-learning fundamentals.
     """
     
     def __init__(self, state_dim, action_dim, num_bins=8):
-        self.state_dim = state_dim
+        
+        # The bins are a discretization of the continuous state
+        # 8 bins = 8 classes 
+        self.state_dim  = state_dim
         self.action_dim = action_dim
-        self.num_bins = num_bins
-        self.q_table = {}
+        self.num_bins   = num_bins
+        self.q_table    = {}
         
         # ===== STUDENT SECTION: Learning Rate =====
         self.learning_rate = 0.15
@@ -94,12 +92,9 @@ class QTabular:
             self.q_table[discrete_state] = np.zeros(self.action_dim)
         current = self.q_table[discrete_state][action]
         self.q_table[discrete_state][action] = current + self.learning_rate * (target - current)
-    
-    def get_state_dict(self):
-        return self.q_table.copy()
-
 
 class LearningProcess:
+    
     """
     ============================================================
     LEARNING PROCESS - MANAGES Q-LEARNING COMPONENTS
@@ -114,7 +109,8 @@ class LearningProcess:
     """
     
     def __init__(self, state_dim, action_dim, use_neural_network=True):
-        self.state_dim = state_dim
+        
+        self.state_dim  = state_dim
         self.action_dim = action_dim
         self.use_neural_network = use_neural_network
         
@@ -135,7 +131,16 @@ class LearningProcess:
     # =====================
     
     def select_action(self, state, epsilon):
+        """
+        Select action using epsilon-greedy strategy.
         
+        Args:
+            state: Current state observation
+            epsilon: Exploration rate (0=exploit, 1=explore)
+        
+        Returns:
+            int: Selected action index
+        """
         # ===== STUDENT SECTION: Exploration Strategy =====
         
         if random.random() < epsilon:
@@ -145,7 +150,8 @@ class LearningProcess:
             # EXPLOITATION: Best action according to Q-values
             if self.use_neural_network:
                 with torch.no_grad():
-                    q_values = self.model(torch.from_numpy(state))
+                    state_tensor = torch.from_numpy(state)
+                    q_values = self.model(state_tensor)
                     action = torch.argmin(q_values).item()
             else:
                 q_values = self.model.get_q_values(state)
@@ -155,7 +161,16 @@ class LearningProcess:
         return action
     
     def get_epsilon(self, episode, total_episodes):
+        """
+        Calculate exploration rate for current episode.
         
+        Args:
+            episode: Current episode number
+            total_episodes: Total training episodes
+        
+        Returns:
+            float: Epsilon value in [0.05, 1.0]
+        """
         # ===== STUDENT SECTION: Decay Schedule =====
         
         # Linear decay
@@ -172,7 +187,19 @@ class LearningProcess:
     # =====================
     
     def calculate_reward(self, creature_state, direction_vector, start_pos, energy_cost):
+        """
+        Calculate reward based on creature behavior.
         
+        Args:
+            creature_state: Dict with 'head_pos', 'head_vel', 'num_segments'
+            direction_vector: Target direction unit vector
+            start_pos: Starting position for distance calculation
+            energy_cost: Energy consumed this step
+        
+        Returns:
+            float: Reward value (negative = cost)
+            dict: Additional info for logging
+        """
         head_pos = creature_state['head_pos']
         head_vel = creature_state['head_vel']
         num_segments = creature_state['num_segments']
@@ -204,7 +231,13 @@ class LearningProcess:
         
         # ===============================================
         
-        info = {'distance': distance,'speed': speed,'alignment': alignment,'num_segments': num_segments}
+        info = {
+            'distance': distance,
+            'speed': speed,
+            'alignment': alignment,
+            'num_segments': num_segments
+        }
+        
         return reward, info
     
     # =====================
@@ -212,7 +245,19 @@ class LearningProcess:
     # =====================
     
     def update_q_values(self, state, action, cost, next_state, done):
+        """
+        Update Q-values using Bellman equation.
         
+        Q(s,a) = cost + gamma * min(Q(s', a'))
+        
+        Args:
+            state, action, next_state: Transition
+            cost: Immediate cost (negative reward)
+            done: Episode termination flag
+        
+        Returns:
+            float or None: Loss value (NN only)
+        """
         # ===== STUDENT SECTION: Q-Update Logic =====
         
         if self.use_neural_network:
@@ -238,92 +283,94 @@ class LearningProcess:
         # =============================================
     
     def get_model_state(self):
+        """Get current model state for checkpointing."""
         if self.use_neural_network:
             return self.model.state_dict()
         else:
-            return self.model.get_state_dict()
+            return self.model.q_table.copy()
+
 
 # ==========================================================
 #       PHYSICS MODEL (ORANGE) - REPLACEABLE MODULE
-#  Contains: water_drag, thrust_coeff, angle_speed, max_angle
+#  Contains: water_drag, thrust_coeff, angle_speed
 #  Function: update creature position and velocity
 # ==========================================================
 
 class PhysicsModel:
     
-    """
-    Physics model for aquatic creature simulation.
-    This module can be replaced with alternative physics implementations.
-    
-    Responsibilities:
-    - Apply thrust based on angular motion
-    - Apply water drag
-    - Update position from velocity
-    """
-    
-    def __init__(self):
-        
-        # ===== PHYSICS PARAMETERS =====
-        self.water_drag         = 0.05
-        self.thrust_coefficient = 3.5
-        self.angle_speed        = 0.4
-        self.max_angle          = 1.2
-        # ==============================
+    def __init__(self, water_drag=0.05, thrust_coefficient=3.5, angle_speed=0.4):
+        self.base_drag = water_drag
+        self.thrust_coefficient = thrust_coefficient
+        self.angle_speed = angle_speed
     
     def update(self, creature, dt):
         
-        """
-        Update creature position and velocity based on physics.
+        old_angles = creature.angles.copy()
         
-        Args:
-            creature: Creature object to update
-            dt: Time step
+        # 1. Update Angles (Same as before)
+        for i in range(creature.num_segments):
+            diff = creature.target_angles[i] - creature.angles[i]
+            creature.angles[i] += diff * self.angle_speed
         
-        Returns:
-            np.array: Thrust vector generated
-        """
+        thrust = np.array([0.0, 0.0])
         
-        # Creature attributes
-        num_segments     = creature.num_segments
-        base_orientation = creature.base_orientation
+        # Calculate the "Spread" of the creature for Drag calculations
+        # Assuming angles are relative to the body axis
+        total_spread = sum(abs(a) for a in creature.angles)
         
-        # Vectorized angle update
-        old_angles  = creature.angles[:num_segments].copy()
-        angle_diffs = creature.target_angles[:num_segments] - old_angles
-        new_angles  = old_angles + angle_diffs * self.angle_speed
+        # 2. Calculate Thrust (The "Jet" Effect)
+        # We approximate the volume change by the change in angle sum
+        # This assumes a simple V where angle change = volume change
         
-        # Vectorized cumulative angles (cumsum)
-        cum_angles = base_orientation + np.cumsum(new_angles)
+        # Sum of angles determines the "volume" state roughly
+        # Actually, for a simple V, the angle of the last segment relative to center is key
+        # Let's simplify: Thrust is generated based on the velocity of the segments closing.
         
-        # Vectorized thrust calculation
-        angle_changes = new_angles - old_angles
-        valid_mask = np.abs(angle_changes) > 0.001
+        for i in range(creature.num_segments):
+            angle_change = creature.angles[i] - old_angles[i]
+            
+            # We only care about the rate of closure
+            # If angle_change < 0 (closing), we want positive thrust (forward)
+            # If angle_change > 0 (opening), we want negative thrust (suction/backward)
+            
+            # Direction of the segment (body frame)
+            # Note: This logic assumes the creature tries to align with base_orientation
+            # and the angles define the V shape relative to the centerline.
+            
+            # Let's use a simplified Jet Model:
+            # Force = -k * (dAngle/dt) * Forward_Direction
+            
+            # Determine forward direction
+            forward_dir = np.array([math.cos(creature.base_orientation), 
+                                    math.sin(creature.base_orientation)])
+            
+            # Positive angle_change = Opening = Suction (Negative Thrust)
+            # Negative angle_change = Closing = Jet (Positive Thrust)
+            # We use -angle_change so that closing gives positive force
+            thrust_mag = -angle_change * self.thrust_coefficient
+            
+            # Apply this as an axial force (along the body axis)
+            thrust += thrust_mag * forward_dir
+            
+            # Optional: Add a small lateral component if you want it to wiggle
+            # But for pure V-propulsion, the force is axial.
+            
+        # 3. Apply Thrust
+        creature.head_vel = creature.head_vel + thrust * dt
         
-        seg_dirs  = np.column_stack([np.cos(cum_angles), np.sin(cum_angles)])
-        perp_dirs = np.column_stack([-seg_dirs[:, 1], seg_dirs[:, 0]])
-        
-        position_factors = np.arange(1, num_segments + 1) / num_segments
-        thrust_mags = np.abs(angle_changes) * self.thrust_coefficient * position_factors
-        
-        # Only sum valid contributions
-        signs = np.sign(angle_changes)
-        lateral_thrust = np.sum((thrust_mags * signs)[:, None] * perp_dirs * valid_mask[:, None], axis=0)
-        forward_thrust = np.sum(thrust_mags * 0.5 * seg_dirs[:, 0] * valid_mask)
-        
-        thrust = lateral_thrust + np.array([forward_thrust, 0.0])
-        
-        # Physics update (vectorized)
-        head_vel = creature.head_vel + thrust * dt
-        speed = np.linalg.norm(head_vel)
+        # 4. Apply Dynamic Drag (The "Parachute" Effect)
+        speed = np.linalg.norm(creature.head_vel)
         if speed > 0.001:
-            head_vel += -self.water_drag * head_vel * speed * dt
+            # Drag coefficient increases as the creature opens up
+            # When spread is 0 (closed), drag is low.
+            # When spread is large (open), drag is high.
+            current_drag_coeff = self.base_drag * (1.0 + 2.0 * total_spread)
+            
+            drag = -current_drag_coeff * creature.head_vel * speed
+            creature.head_vel = creature.head_vel + drag * dt
         
-        head_pos = creature.head_pos + head_vel * dt
-        
-        # Write back
-        creature.angles[:num_segments] = new_angles
-        creature.head_vel = head_vel
-        creature.head_pos = head_pos
+        # 5. Update Position
+        creature.head_pos = creature.head_pos + creature.head_vel * dt
         
         return thrust
 
@@ -332,105 +379,153 @@ class PhysicsModel:
 #  Contains: segments, angles, position, velocity, orientation
 # ==========================================================
 
+def parse_creature_config(filepath):
+    """
+    Parses creature configuration from a text file.
+    Returns a dictionary with the extracted values.
+    """
+    config = {}
+    
+    with open(filepath, 'r') as f:
+        for line in f:
+            # Skip empty lines and comments
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            
+            # Split on '=' and clean up
+            if '=' in line:
+                key, value = line.split('=', 1)
+                key = key.strip()
+                value = value.strip()
+                
+                # Try to convert to appropriate type
+                try:
+                    # Try int first, then float, then bool, then string
+                    if value.lower() == 'true':
+                        config[key] = True
+                    elif value.lower() == 'false':
+                        config[key] = False
+                    elif '.' in value:
+                        config[key] = float(value)
+                    else:
+                        config[key] = int(value)
+                except ValueError:
+                    config[key] = value
+    
+    return config
+
 class Creature:
     
     """
     Creature state container.
-    
-    Holds all state information for an aquatic creature:
-    - Segment configuration
-    - Joint angles
-    - Position and velocity
-    - Target direction
     """
     
     def __init__(self,
+                 segment_length=3, size_penalty_factor=0.25,
+                 fixed_segments=True, num_segments=2,
                  min_segments=2, max_segments=10,
-                 fixed_segments=True, segment_length=10,
-                 target_angle_deg=0.0, use_nn=True):
+                 target_angle_deg=0, max_angle=180,
+                 use_nn=True):
         
         # ===== CREATURE PARAMETERS =====
-        self.min_segments   = min_segments
-        self.max_segments   = max_segments
-        self.fixed_segments = fixed_segments
-        self.segment_length = segment_length
+        self.segment_length      = segment_length       # The size of each member of the creature
+        self.size_penalty_factor = size_penalty_factor  # The factor for each new member in energy consumption
         
-        self.target_angle_deg = target_angle_deg
+        self.fixed_segments = fixed_segments # Can the creature grow/lose members?
+        self.num_segments   = num_segments   # If no, there's a fixed number of members
+        self.min_segments   = min_segments   # If yes, there's a max/min number of members
+        self.max_segments   = max_segments
+        
+        # The direction in which the creature should progress
+        self.target_angle_deg = target_angle_deg 
         self.target_angle_rad = math.radians(target_angle_deg)
-        self.use_nn = use_nn
+        self.base_orientation = math.radians(target_angle_deg)
+        
+        self.max_angle = math.radians(max_angle) # Maximum angle between 2 members
+        self.use_nn    = use_nn                  # Can the creature use a NN to evolve?
         
         # ===== STATE VARIABLES =====
-        self.num_segments = min_segments
         
-        self.base_orientation = 0.0
-        self.angles           = np.zeros(max_segments, dtype=np.float64)
-        self.target_angles    = np.zeros(max_segments, dtype=np.float64)
+        # If the creature can grow, the initial number of states is set to the minimum one
+        if not fixed_segments: self.num_segments = min_segments
         
+        # The angles between the members are used as states
+        # There are N-1 angles in the creature with N members + the orientation of the head
+        # Thus, potentially N different angles to modify
+        self.angles = np.zeros(max_segments, dtype=np.float64)
+        self.target_angles = np.zeros(max_segments, dtype=np.float64)
+        
+        # Position and velocity vectors of the head
         self.head_pos = np.array([0.0, 0.0], dtype=np.float64)
         self.head_vel = np.array([0.0, 0.0], dtype=np.float64)
-        
-        # ============================
         
         # Direction vector for movement
         self.direction_vector = np.array([math.cos(self.target_angle_rad),math.sin(self.target_angle_rad)])
     
-    def reset(self, x=0.0, y=0.0):
+    def reset(self, x=0.0, y=0.0, orientation=None):
         
         """
         Reset creature to initial straight-line configuration.
         
         Args:
             x, y: Starting position
+            orientation: Heading direction (default: target direction)
         """
         
+        # Reset to the desired progress direction
+        if orientation is None:
+            orientation = self.target_angle_rad
+        
         # Straight body: all relative angles are zero
-        self.angles = np.zeros(self.max_segments, dtype=np.float64)
+        self.angles        = np.zeros(self.max_segments, dtype=np.float64)
         self.target_angles = np.zeros(self.max_segments, dtype=np.float64)
         
         # Set heading
-        self.base_orientation = self.target_angle_rad
+        self.base_orientation = orientation
         
         # Reset position and velocity
         self.head_pos = np.array([x, y], dtype=np.float64)
         self.head_vel = np.array([0.0, 0.0], dtype=np.float64)
-        
-    # ==========================================================
     
     def add_segment(self):
+        """Add a segment if possible."""
         if self.num_segments < self.max_segments:
             self.num_segments += 1
             return True
         return False
     
     def remove_segment(self):
+        """Remove a segment if possible."""
         if self.num_segments > self.min_segments:
             self.num_segments -= 1
             return True
         return False
     
-    # ==========================================================
-    
-    def set_target_angle(self, segment_idx, angle, max_angle=1.2):
-        if 0 <= segment_idx < self.num_segments:
-            self.target_angles[segment_idx] = np.clip(angle, -max_angle, max_angle)
-    
     def get_body_size_factor(self):
-        return 1.0 + (self.num_segments - 2) * 0.25
+        """Get size factor based on segment count."""
+        return 1.0 + (self.num_segments - 2) * self.size_penalty_factor
     
-    def get_state(self, max_segments, max_angle):
+    def set_target_angle(self, angle_idx, angle):
+        """Set target angle for an angle between 2 segments."""
+        if 0 <= angle_idx < self.num_segments:
+            self.target_angles[angle_idx] = np.clip(angle, -self.max_angle, self.max_angle)
+    
+    def get_state(self, max_segments):
+        """Get state vector for Q-learning."""
         
+        # The current angular values and errors
         angles_sin   = np.sin(self.angles[:self.num_segments])
         angles_cos   = np.cos(self.angles[:self.num_segments])
-        angle_errors = (self.target_angles[:self.num_segments] - self.angles[:self.num_segments]) / max_angle
+        angle_errors = (self.target_angles[:self.num_segments] - self.angles[:self.num_segments]) / self.max_angle
         
+        # Add 0 for potential angles that could appear by adding members
         pad_size     = max_segments - self.num_segments
         angles_sin   = np.pad(angles_sin, (0, pad_size))
         angles_cos   = np.pad(angles_cos, (0, pad_size))
         angle_errors = np.pad(angle_errors, (0, pad_size))
         
-        # Dividing the velocity by 10 for neural networks efficiency
-        return np.concatenate([angles_sin, angles_cos, angle_errors,
-                               self.head_vel / 10.0, [self.num_segments / max_segments]]).astype(np.float32)
+        return np.concatenate([angles_sin, angles_cos, angle_errors, self.head_pos, self.head_vel, self.num_segments / max_segments]).astype(np.float32)
 
 # ==========================================================
 #       ENVIRONMENT (GREEN/TEAL) - ORCHESTRATOR
@@ -438,54 +533,57 @@ class Creature:
 # ==========================================================
 
 class Environment:
+    
     """
     Environment orchestrator.
-    
-    Coordinates:
-    - Creature state
-    - Physics simulation
-    - Learning process
-    - Training loop
-    
-    This class only calls methods of other classes when necessary.
     """
     
-    def __init__(self, min_segments=2, max_segments=10, fixed_segments=True,
-                 target_angle_deg=0.0, use_nn=True, duration_simulation=30.0, dt=0.01):
+    def __init__(self,
+                 min_segments=2, max_segments=10,
+                 duration_simulation=30.0, dt=0.01):
         
         # ===== ENVIRONMENT PARAMETERS =====
+        
+        # The number of segments of the creatures are bounded by the environnement
         self.min_segments = min_segments
         self.max_segments = max_segments
-        self.fixed_segments = fixed_segments
+        
+        # Defines the duration of the simulation in seconds
         self.duration_simulation = duration_simulation
-        self.dt = dt
-        self.max_steps = int(duration_simulation / dt)
-        self.target_angle_deg = target_angle_deg
-        # ===================================
+        self.dt                  = dt
+        self.max_steps           = int(duration_simulation / dt)
         
-        # ===== COMPONENTS =====
-        # Create creature
+        # ===== CREATURE =====
+        
+        # Create creature from a txt file
+        creature_dic = parse_creature_config("Creature.txt")
+        
         self.creature = Creature(
-            min_segments=min_segments,
-            max_segments=max_segments,
-            fixed_segments=fixed_segments,
-            target_angle_deg=target_angle_deg,
-            use_nn=use_nn
-        )
+            segment_length      = float(creature_dic['segment_length']),
+            size_penalty_factor = float(creature_dic['size_penalty_factor']),
+            
+            fixed_segments = bool(creature_dic['fixed_segments']),
+            num_segments   = int(creature_dic['num_segments']),
+            min_segments   = int(max(min_segments, creature_dic['min_segments'])),
+            max_segments   = int(min(max_segments, creature_dic['max_segments'])),
+            
+            target_angle_deg = float(creature_dic['target_angle_deg']),
+            max_angle        = float(creature_dic['max_angle']),
+            use_nn           = bool(creature_dic['use_nn']))
         
-        # Create physics model
+        # ===== PHYSIC MODEL =====
         self.physics_model = PhysicsModel()
         
-        # Create learning process (will be initialized with proper dimensions)
+        # ===== LEARNING PROCESSES =====
         self.learning_process_nn = None
         self.learning_process_tabular = None
-        self._init_learning_process(use_nn)
+        
         # ======================
         
         # Energy system
         self.base_energy = 100.0
-        self.max_energy = 100.0
-        self.energy = self.max_energy
+        self.max_energy  = 100.0
+        self.energy      = self.max_energy
         
         # Tracking
         self.step_count = 0
@@ -655,42 +753,36 @@ class Environment:
 
 
 class TrainingSession:
-    
     """
     Training session manager.
     Handles the training loop and checkpointing.
     """
     
     def __init__(self, env, episodes=300, checkpoint_interval=20):
-        
-        self.env                 = env
-        self.episodes            = episodes
+        self.env = env
+        self.episodes = episodes
         self.checkpoint_interval = checkpoint_interval
-        
         self.checkpoints = []
         self.best_distance = -float('inf')
         self.best_trajectory = []
     
     def run(self):
-        
         """Run training loop."""
         print("=" * 60)
         print("TRAINING AQUATIC CREATURE V9 (Modular Architecture)")
         print("=" * 60)
         
         learning = self.env.active_learning
-        use_nn   = learning.use_neural_network
+        use_nn = learning.use_neural_network
         
         print(f"Using {'NEURAL NETWORK' if use_nn else 'TABULAR'} Q-learning")
         
         for ep in range(self.episodes + 1):
-            
-            state        = self.env.reset()
-            epsilon      = learning.get_epsilon(ep, self.episodes)
+            state = self.env.reset()
+            epsilon = learning.get_epsilon(ep, self.episodes)
             max_distance = 0
             
             for step in range(self.env.max_steps):
-                
                 # Select action via learning process
                 action = learning.select_action(state, epsilon)
                 
@@ -712,11 +804,14 @@ class TrainingSession:
             
             # Save checkpoint
             if ep % self.checkpoint_interval == 0:
-                
-                checkpoint = TrainingCheckpoint(episode=ep, model_state=learning.get_model_state(),
-                                                trajectory=copy.deepcopy(self.best_trajectory), max_distance=self.best_distance,
-                                                use_nn=use_nn, num_segments=self.env.creature.num_segments)
-                
+                checkpoint = TrainingCheckpoint(
+                    episode=ep,
+                    model_state=learning.get_model_state(),
+                    trajectory=copy.deepcopy(self.best_trajectory),
+                    max_distance=self.best_distance,
+                    use_nn=use_nn,
+                    num_segments=self.env.creature.num_segments
+                )
                 self.checkpoints.append(checkpoint)
                 print(f"Ep {ep:3d} | Best: {self.best_distance:6.1f}m | Segs: {self.env.creature.num_segments}")
         
@@ -730,12 +825,13 @@ class TrainingCheckpoint:
     """Checkpoint container for saving training state."""
     
     def __init__(self, episode, model_state, trajectory, max_distance, use_nn, num_segments):
-        self.episode      = episode
-        self.model_state  = copy.deepcopy(model_state)
-        self.trajectory   = copy.deepcopy(trajectory)
+        self.episode = episode
+        self.model_state = copy.deepcopy(model_state)
+        self.trajectory = copy.deepcopy(trajectory)
         self.max_distance = max_distance
-        self.use_nn       = use_nn
+        self.use_nn = use_nn
         self.num_segments = num_segments
+
 
 # ==========================================================
 #       MAIN EXECUTION
@@ -755,8 +851,15 @@ def save_simulation(checkpoints, use_nn, target_angle, duration, num_segments, f
     seg_info = f"seg{num_segments}" + ("" if fixed_segments else "var")
     filename = os.path.join(result_dir, f"aquatic_V9_{method}_{seg_info}_{timestamp}.pkl")
     
-    save_data = {'checkpoints': checkpoints,'use_nn': use_nn,'target_angle': target_angle,'duration': duration,
-                 'num_segments': num_segments,'fixed_segments': fixed_segments,'timestamp': datetime.now().isoformat()}
+    save_data = {
+        'checkpoints': checkpoints,
+        'use_nn': use_nn,
+        'target_angle': target_angle,
+        'duration': duration,
+        'num_segments': num_segments,
+        'fixed_segments': fixed_segments,
+        'timestamp': datetime.now().isoformat()
+    }
     
     with open(filename, 'wb') as f:
         pickle.dump(save_data, f)
@@ -770,9 +873,9 @@ def main():
     print("=" * 60)
     
     try:
-        episodes            = int(input("Episodes [300]: ").strip() or 300)
-        duration            = float(input("Episode duration (s) [30]: ").strip() or 30)
-        angle               = float(input("Target direction (°) [0]: ").strip() or 0)
+        episodes = int(input("Episodes [300]: ").strip() or 300)
+        duration = float(input("Episode duration (s) [30]: ").strip() or 30)
+        angle = float(input("Target direction (°) [0]: ").strip() or 0)
         checkpoint_interval = int(input("Checkpoint interval [20]: ").strip() or 20)
         
         seg_choice = input("Fix number of segments? (y/n) [y]: ").strip().lower()
@@ -793,12 +896,15 @@ def main():
     print()
     
     # Create environment
-    env = Environment(min_segments=num_segments,max_segments=10,fixed_segments=fixed_segments,
-                      target_angle_deg=angle,use_nn=use_nn,duration_simulation=duration)
+    env = Environment(
+        min_segments=num_segments if not fixed_segments else num_segments,
+        max_segments=10,
+        duration_simulation=duration
+    )
     
     # Create and run training session
     session = TrainingSession(env, episodes=episodes, checkpoint_interval=checkpoint_interval)
-    _ , checkpoints = session.run()
+    model, checkpoints = session.run()
     
     # Save results
     saved_file = save_simulation(checkpoints, use_nn, angle, duration, num_segments, fixed_segments)
