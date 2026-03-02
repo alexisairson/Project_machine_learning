@@ -1,0 +1,36 @@
+# ==========================================================
+# SIMULATION CONFIGURATION
+# ==========================================================
+# This file configures the simulation parameters.
+# ==========================================================
+
+# Minimum number of body segments allowed (don't go below 2)
+# [DEFAULT = 2]
+min_segments = 2
+
+# Maximum number of body segments allowed (don't be too optimistic, 10 is good)
+# [DEFAULT = 10]
+max_segments = 10
+
+# Duration of each simulation episode in seconds (don't be too optimistic, 30 seconds is good)
+# [DEFAULT = 30]
+duration_simulation = 45
+
+# Physics time step in seconds
+# Smaller = more accurate but slower (don't be too optimistic, 0.01 is good)
+# [DEFAULT = 0.01]
+dt = 0.01
+
+# Number of physics substeps per action step
+# Higher = more stable simulation (don't be too optimistic, 5 is good)
+# [DEFAULT = 5]
+substeps = 5
+
+# Number of episodes for the learning process (don't be too optimistic, 300 is good)
+# [DEFAULT = 300]
+episodes = 1000
+
+# Checkpoint intervals for the visualization tool
+# It should be a divider of the number of episodes (don't be too optimistic, 10 checkpoints is good)
+# [DEFAULT = 20]
+checkpoint_interval = 10

@@ -1,0 +1,20 @@
+# ==========================================================
+# PHYSICS MODEL CONFIGURATION
+# ==========================================================
+# This file configures the physics parameters for aquatic propulsion simulation.
+# ==========================================================
+
+# Thrust coefficient for segment rotation propulsion
+# Higher = more thrust per rotation
+# [DEFAULT = 3.5]
+thrust_coefficient = 3.5
+
+# Speed at which segment angles approach their target values
+# Range: 0.1 - 1.0
+# [DEFAULT = 0.4]
+angle_speed = 0.4
+
+# Drag multiplier for projected frontal area
+# Range: 0.5 - 5.0
+# [DEFAULT = 1]
+drag_spread_factor = 1.0

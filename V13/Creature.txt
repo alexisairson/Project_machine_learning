@@ -1,0 +1,53 @@
+# ==========================================================
+# CREATURE CONFIGURATION
+# ==========================================================
+
+# Length of each body segment
+# [DEFAULT = 3]
+segment_length = 3
+
+# Energy penalty factor per additional segment
+# [DEFAULT = 0.25]
+size_penalty_factor = 0.25
+
+# Whether the number of segments is fixed or not
+# [DEFAULT = true]
+fixed_segments = true
+
+# Number of body segments (if fixed_segments is true)
+# [DEFAULT = 3]
+num_segments = 3
+
+# Minimum possible number of segments (if fixed_segments is false)
+# [DEFAULT = 2]
+min_segments = 2
+
+# Maximum possible number of segments (if fixed_segments is false)
+# [DEFAULT = 10]
+max_segments = 10
+
+# Target direction for movement in degrees
+# [DEFAULT = 0]
+target_angle_deg = 0
+
+# Maximum angle magnitude in degrees
+# [DEFAULT = 180]
+max_angle_deg = 180
+
+# Use neural network for learning (true is neural network, false is tabular)
+# [DEFAULT = false]
+use_nn = true
+
+# Angle difference for every angular movement
+# [DEFAULT = 10]
+angle_step = 10
+
+# ==========================================================
+# ENERGY SYSTEM PARAMETERS
+# ==========================================================
+
+base_energy = 100.0
+energy_cost_angle_move = 0.03
+energy_cost_add_segment = 3.0
+energy_cost_remove_segment = 1.5
+metabolism_rate = 0.002

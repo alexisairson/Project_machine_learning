@@ -332,6 +332,8 @@ class PhysicsModel:
         )
     
     def update(self, creature, dt):
+        """Update creature's position and velocity based on segment angles and physics."""
+
         old_angles = creature.segment_angles.copy()
         
         # 1. Update angles towards target
@@ -516,9 +518,7 @@ class Creature:
         )
     
     def reset(self, x=0.0, y=0.0, orientation=None):
-        """
-        Reset the creature for a new episode.
-        """
+        """Reset the creature for a new episode."""
         
         # Reset the orientation of the head
         self.base_orientation = orientation if orientation is not None else self.target_angle_rad
@@ -567,6 +567,10 @@ class Creature:
     
     def add_segment(self):
         """Add a new member to the creature if possible."""
+
+        # Computes the cost of adding a new member
+        size_factor = self.get_body_size_factor()
+        energy_cost = self.energy_cost_add_segment * size_factor
         
         # Ensures that we don't exceed the maximal number of members allowed
         if self.num_segments < self.max_segments:
@@ -575,10 +579,6 @@ class Creature:
         # Ensures that the creature still has enough energy to add a new member
         if self.energy - energy_cost < 0:
             return False
-            
-        # Computes the cost of adding a new member
-        size_factor = self.get_body_size_factor()
-        energy_cost = self.energy_cost_add_segment * size_factor
         
         # If it can add the new member,
         self.energy       -= energy_cost # Decreases the energy
@@ -598,6 +598,10 @@ class Creature:
     
     def remove_segment(self):
         """Remove a member of the creature if possible."""
+
+        # Computes the cost of removing a member
+        size_factor = self.get_body_size_factor()
+        energy_cost = self.energy_cost_add_segment * size_factor
         
         # Ensures that we don't go below the minimal number of members allowed
         if self.num_segments > self.min_segments:
@@ -606,10 +610,6 @@ class Creature:
         # Ensures that the creature still has enough energy to remove a member
         if self.energy - energy_cost < 0:
             return False
-        
-        # Computes the cost of removing a member
-        size_factor = self.get_body_size_factor()
-        energy_cost = self.energy_cost_add_segment * size_factor
         
         # If it can be removed,
         self.energy       -= energy_cost # Decrease the energy level
@@ -621,11 +621,6 @@ class Creature:
         self.energy = min(self.energy, self.max_energy)
         
         return True
-    
-    # def set_target_angle(self, segment_idx, angle):
-    #     """Set target angle for a segment."""
-    #     if 0 <= segment_idx < self.num_segments:
-    #         self.target_angles[segment_idx] = np.clip(angle, -self.max_angle, self.max_angle)  
     
     # def get_state(self):
     #     """
@@ -685,11 +680,13 @@ class Environment:
         )
     
     def _get_action_dim(self):
+
         """
         Action dimension:
-        - For each segment: open, close, hold (3 actions)
-        - If variable segments: add segment, remove segment (2 actions)
+        - For each segment: open, close, hold (3 actions per segment)
+        - If variable number of segments: add segment, remove segment (2 supp actions)
         """
+
         base_actions = self.creature.num_segments * 3
         if self.creature.fixed_segments:
             return base_actions
@@ -697,15 +694,16 @@ class Environment:
     
     def init_learning_process(self, use_nn):
         """Initialize learning process with current dimensions."""
+
         state_dim = self.creature.num_segments
         action_dim = self._get_action_dim()
         
-        self.learning_process = LearningProcess.from_config_file(
-            state_dim, action_dim, use_neural_network=use_nn
-        )
+        self.learning_process = LearningProcess.from_config_file(state_dim, action_dim, use_neural_network=use_nn)
     
     def reset(self):
         """Reset environment for new episode."""
+
+        # Reinitialize the creature
         self.creature.reset(0.0, 0.0, self.creature.target_angle_rad)
         
         # Reinitialize learning process for current segment count
@@ -715,38 +713,40 @@ class Environment:
         self.step_count = 0
         self.start_pos = self.creature.head_pos.copy()
         
-        self.trajectory = [{
-            'pos': self.start_pos.copy(),
-            'segment_angles': self.creature.segment_angles[:self.creature.num_segments].copy(),
-            'num_segments': self.creature.num_segments,
-            'energy': self.creature.energy,
-            'base_orientation': self.creature.base_orientation
-        }]
+        self.trajectory = [{'pos': self.start_pos.copy(),
+                            'segment_angles': self.creature.segment_angles[:self.creature.num_segments].copy(),
+                            'num_segments': self.creature.num_segments,
+                            'energy': self.creature.energy,
+                            'base_orientation': self.creature.base_orientation}]
         
         return self.creature.get_state()
     
     def step(self, action):
         """Execute one environment step."""
+
+        # Starts by retaining the energy due to metabolism
+        metabolism_cost = self.creature.consume_energy_metabolism()
+
+        # Then, we consider a potential action
+        # energy_cost is the cost relative to the action (given the parameters of the creature) if possible (0 otherwise)
+        # segment_changed is either: None, ("ADD", self.creature.num_segments) or ("REMOVE", self.creature.num_segments)
         energy_cost, segment_changed = self._apply_action(action)
         
+        # Apply the physics with a certain number of substeps
+        # This not only modifies the position and velocity of the head
+        # It also sets the angles to their new position with the action taken in account
         for _ in range(self.substeps):
             self.physics_model.update(self.creature, self.dt / self.substeps)
         
-        metabolism_cost = self.creature.consume_energy_metabolism()
         total_energy_cost = energy_cost + metabolism_cost
         
-        self.trajectory.append({
-            'pos': self.creature.head_pos.copy(),
-            'segment_angles': self.creature.segment_angles[:self.creature.num_segments].copy(),
-            'num_segments': self.creature.num_segments,
-            'energy': self.creature.energy,
-            'base_orientation': self.creature.base_orientation
-        })
+        self.trajectory.append({'pos': self.creature.head_pos.copy(),
+                                'segment_angles': self.creature.segment_angles[:self.creature.num_segments].copy(),
+                                'num_segments': self.creature.num_segments,
+                                'energy': self.creature.energy,
+                                'base_orientation': self.creature.base_orientation})
         
-        creature_state = {
-            'head_pos': self.creature.head_pos,
-            'head_vel': self.creature.head_vel
-        }
+        creature_state = {'head_pos': self.creature.head_pos,'head_vel': self.creature.head_vel}
         
         reward, info = self.learning_process.calculate_reward(
             creature_state,
@@ -765,6 +765,7 @@ class Environment:
     
     def _apply_action(self, action):
         """Apply action to creature."""
+
         segment_changed = None
         angle_step = 0.2
         
@@ -774,14 +775,14 @@ class Environment:
             remove_action = self.creature.num_segments * 3 + 1
             
             if action == add_action:
-                if self.creature.add_segment():
+                if self.creature.add_segment(): # If adding is possible, the energy is retained here and this yields True
                     segment_changed = ("ADD", self.creature.num_segments)
                     self.init_learning_process(self.learning_process.use_neural_network)
                     return self.creature.energy_cost_add_segment * self.creature.get_body_size_factor(), segment_changed
                 return 0.0, segment_changed
             
             elif action == remove_action:
-                if self.creature.remove_segment():
+                if self.creature.remove_segment(): # If removing is possible, the energy is retained here and this yields True
                     segment_changed = ("REMOVE", self.creature.num_segments)
                     self.init_learning_process(self.learning_process.use_neural_network)
                     return self.creature.energy_cost_remove_segment * self.creature.get_body_size_factor(), segment_changed
@@ -792,19 +793,19 @@ class Environment:
         action_type = action % 3
         
         if segment_idx < self.creature.num_segments:
+
             if action_type == 0:  # Rotate counter-clockwise (open)
                 current = self.creature.target_angles[segment_idx]
-                self.creature.set_target_angle(segment_idx, current + angle_step)
+                self.creature.target_angles[segment_idx] = np.clip(current + angle_step, -self.creature.max_angle, self.creature.max_angle)
                 return self.creature.consume_energy_angle_move(angle_step), segment_changed
             
             elif action_type == 1:  # Rotate clockwise (close)
                 current = self.creature.target_angles[segment_idx]
-                self.creature.set_target_angle(segment_idx, current - angle_step)
+                self.creature.target_angles[segment_idx] = np.clip(current - angle_step, -self.creature.max_angle, self.creature.max_angle)
                 return self.creature.consume_energy_angle_move(angle_step), segment_changed
         
         # Hold action (action_type == 2)
         return 0.0, segment_changed
-
 
 # ==========================================================
 #       TRAINING SESSION
@@ -898,10 +899,10 @@ def ensure_result_folder():
 
 def save_simulation(checkpoints, use_nn, target_angle, duration, num_segments, fixed_segments):
     result_dir = ensure_result_folder()
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    method = "nn" if use_nn else "tabular"
-    seg_info = f"seg{num_segments}" + ("" if fixed_segments else "var")
-    filename = os.path.join(result_dir, f"aquatic_V11_{method}_{seg_info}_{timestamp}.pkl")
+    timestamp  = datetime.now().strftime("%Y%m%d_%H%M%S")
+    method     = "nn" if use_nn else "tabular"
+    seg_info   = f"seg{num_segments}" + ("" if fixed_segments else "var")
+    filename   = os.path.join(result_dir, f"aquatic_V11_{method}_{seg_info}_{timestamp}.pkl")
     
     save_data = {
         'checkpoints': checkpoints,
