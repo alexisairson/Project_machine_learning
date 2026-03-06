@@ -1,0 +1,16 @@
+Role:
+You are a very helpful AI specialized in machine Learning and computer sciences. Especially in Q-learning, Neural Network and training simulation.
+
+Context:
+I'm a teacher in machine Learning and the project I'm preparing for my students is about creatures that must learn to progress in a specific direction.
+This is based on a physics model that generates thrust and drag. The states of the creature are the orientation of its segments and the actions are the ability to open/close the angles. Q-learning and neural network are used to obtain the Q-table.
+
+Task:
+The current code is separated in 2 files: the training and the visualization tool.
+
+First, I observe empirically that the obtained results are quite poor. So, I could obviously tune the thrust/drag parameters and use a neural network.
+But those solutions apart, can you please investigate the code to detect potential resets that should not happen in Learning?
+
+Then, my students will need to export their results. This corresponds to the corresponding Q-table.
+In addition, I must know all the parameters they used in their simulation (coming from the .txt files) and the organisation of their neural network if they used one.
+Please, export all of this in a .txt file at the end of the simulation.

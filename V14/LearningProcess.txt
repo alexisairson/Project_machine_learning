@@ -1,0 +1,42 @@
+# ==========================================================
+# LEARNING PROCESS CONFIGURATION
+# ==========================================================
+# This file configures the Q-learning parameters.
+# ==========================================================
+
+# Learning rate for neural network optimizer
+# Range: 0.0001 - 0.01
+# Higher = faster learning, may be unstable
+# [DEFAULT = 0.001]
+learning_rate_nn = 0.001
+
+# Learning rate for tabular Q-learning
+# Range: 0.1 - 1
+# Higher = faster learning, may be unstable
+# [DEFAULT = 0.15]
+learning_rate_tabular = 0.15
+
+# Discount factor (gamma) for future rewards
+# Range: 0.1 - 0.9
+# Higher = more emphasis on long-term rewards
+# [DEFAULT = 0.9]
+gamma = 0.9
+
+# Minimum exploration rate (epsilon)
+# The epsilon-greedy strategy decays from 1.0 to this value
+# [DEFAULT = 0.05]
+epsilon_min = 0.05
+
+# Coefficients for the different terms in the reward function
+
+# Coefficient for the distance up to this state
+# [DEFAULT = 0.05]
+coeff_dist = 0.05
+
+# Coefficient for the future distance based on current velocity
+# [DEFAULT = 0.5]
+coeff_vel = 0.5
+
+# Coefficient for the penalty for energy use
+# [DEFAULT = 0.005]
+coeff_energy = 0.005
