@@ -14,3 +14,5 @@ But those solutions apart, can you please investigate the code to detect potenti
 Then, my students will need to export their results. This corresponds to the corresponding Q-table.
 In addition, I must know all the parameters they used in their simulation (coming from the .txt files) and the organisation of their neural network if they used one.
 Please, export all of this in a .txt file at the end of the simulation.
+
+Can you please then modify the codes to achieve those goals?

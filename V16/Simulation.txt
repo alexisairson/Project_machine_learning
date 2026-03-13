@@ -33,4 +33,4 @@ episodes = 300
 # Checkpoint intervals for the visualization tool
 # It should be a divider of the number of episodes (don't be too optimistic, 10 checkpoints is good)
 # [DEFAULT = 20]
-checkpoint_interval = 100
+checkpoint_interval = 50

@@ -34,7 +34,6 @@ def parse_physics_model(filepath):
     except FileNotFoundError:
         print("Configuration file 'PhysicsModel.txt' not found. Using default parameters.")
         return DEFAULT
-
 class PhysicsModel:
 
     """
@@ -222,7 +221,6 @@ def parse_creature(filepath):
     except FileNotFoundError:
         print("Configuration file 'Creature.txt' not found. Using default parameters.")
         return DEFAULT
-
 class Creature:
 
     """
@@ -310,7 +308,6 @@ class Creature:
         
         # Reset energy level
         self.energy = self.max_energy
-
         # The max energy level depends on the current size of the creature
         self.max_energy = self.base_energy * self.get_body_size_factor()
 
@@ -328,7 +325,7 @@ class Creature:
         # Ensures that the creature still has enough energy to stay alive
         if self.energy - energy_cost < 0:
             self.energy = 0
-            return [False]
+            return [False, 0]
 
         # If it's the case, decrease the level of energy
         self.energy -= energy_cost
@@ -344,7 +341,7 @@ class Creature:
         
         # Ensures that the creature still has enough energy to make the move
         if self.energy - energy_cost < 0:
-            return [False]
+            return [False, 0]
         
         # If it's the case, decrease the energy level of the creature
         self.energy -= energy_cost
@@ -360,11 +357,11 @@ class Creature:
         
         # Ensures that we don't exceed the maximal number of segments
         if self.num_segments >= self.max_segments:
-            return [False]
+            return [False, 0]
         
         # And that the creature still has enough energy to add the segment
         if self.energy - energy_cost < 0:
-            return [False]
+            return [False, 0]
         
         # If it's the case,
         self.energy       -= energy_cost # Decrease the energy level of the creature
@@ -389,11 +386,11 @@ class Creature:
         
         # Ensures that we don't go below the minimal number of segments
         if self.num_segments <= self.min_segments:
-            return [False]
+            return [False, 0]
         
         # And that the creature still has enough energy to remove the segment
         if self.energy - energy_cost < 0:
-            return [False]
+            return [False, 0]
         
         # If it's the case,
         self.energy       -= energy_cost # Decrease the energy level of the creature
@@ -436,21 +433,21 @@ def parse_learning_process(filepath):
             for line in f:
                 line = line.strip()
                 
-                if   "use_nn" in line and "=" in line:               config["use_nn"]               = True if "true" in line.split("=")[1].strip().lower() else False
-                elif "learning_rate_nn" in line and "=" in line:     config["learning_rate_nn"]     = float(line.split("=")[1].strip())
+                if   "use_nn" in line and "=" in line:               config["use_nn"]                 = True if "true" in line.split("=")[1].strip().lower() else False
+                elif "learning_rate_nn" in line and "=" in line:     config["learning_rate_nn"]       = float(line.split("=")[1].strip())
                 elif "learning_rate_tabular" in line and "=" in line: config["learning_rate_tabular"] = float(line.split("=")[1].strip())
-                elif "gamma" in line and "=" in line:                config["gamma"]                = float(line.split("=")[1].strip())
-                elif "coeff_dist" in line and "=" in line:           config["coeff_dist"]           = float(line.split("=")[1].strip())
-                elif "coeff_vel" in line and "=" in line:            config["coeff_vel"]            = float(line.split("=")[1].strip())
-                elif "coeff_energy" in line and "=" in line:         config["coeff_energy"]         = float(line.split("=")[1].strip())
-                elif "epsilon_min" in line and "=" in line:          config["epsilon_min"]          = float(line.split("=")[1].strip())
+                elif "gamma" in line and "=" in line:                config["gamma"]                  = float(line.split("=")[1].strip())
+                elif "coeff_dist" in line and "=" in line:           config["coeff_dist"]             = float(line.split("=")[1].strip())
+                elif "coeff_vel" in line and "=" in line:            config["coeff_vel"]              = float(line.split("=")[1].strip())
+                elif "coeff_energy" in line and "=" in line:         config["coeff_energy"]           = float(line.split("=")[1].strip())
+                elif "epsilon_min" in line and "=" in line:          config["epsilon_min"]            = float(line.split("=")[1].strip())
             return config
         
     except FileNotFoundError:
         print("Configuration file 'LearningProcess.txt' not found. Using default parameters.")
         return DEFAULT
-
 class QTabular:
+    
     """
     Tabular Q-learning with state discretization.
     
@@ -486,7 +483,8 @@ class QTabular:
         
         return self.q_table[state_key]
     
-    def update_q_values(self, state, action, target):
+    def update_q_value(self, state, action, target):
+        
         """
         Update a single Q-value using the Q-learning update rule:
         Q(s,a) = Q(s,a) + learning_rate * (target - Q(s,a))
@@ -502,17 +500,19 @@ class QTabular:
     
     def load_q_table(self, q_table_dict):
         """Load a Q-table from a dictionary (with lists converted to numpy arrays)."""
+        
         self.q_table = {}
         for state_key, q_values in q_table_dict.items():
+            
             # Convert state_key back to tuple if it's a string representation
             if isinstance(state_key, str):
-                # Parse string like "(0.0, 0.1, 0.2)" back to tuple
-                state_key = tuple(float(x.strip()) for x in state_key.strip('()').split(','))
+                state_key = tuple(float(x.strip()) for x in state_key.strip('()').split(',')) # Parse string like "(0.0, 0.1, 0.2)" back to tuple
+                
             self.q_table[state_key] = np.array(q_values)
+            
         print(f"Loaded Q-table with {len(self.q_table)} states")
-
-
-class EfficientQNetwork(nn.Module):
+class QNetwork(nn.Module):
+    
     """
     Efficient Neural Network for Q-value approximation.
     
@@ -526,10 +526,10 @@ class EfficientQNetwork(nn.Module):
     """
     
     def __init__(self, state_dim, action_dim):
-        super(EfficientQNetwork, self).__init__()
+        super(QNetwork, self).__init__()
         
-        self.state_dim = state_dim
-        self.action_dim = action_dim
+        self.state_dim  = state_dim     # The entry layer is the state dimension
+        self.action_dim = action_dim    # The output layer is the action dimension
         
         # Efficient architecture: fewer layers, smaller dimensions
         self.network = nn.Sequential(
@@ -542,6 +542,9 @@ class EfficientQNetwork(nn.Module):
         
         # Initialize weights
         self._init_weights()
+        
+    def forward(self, x):
+        return self.network(x)
     
     def _init_weights(self):
         """Initialize network weights using Xavier initialization."""
@@ -550,17 +553,14 @@ class EfficientQNetwork(nn.Module):
                 nn.init.xavier_uniform_(layer.weight)
                 nn.init.zeros_(layer.bias)
     
-    def forward(self, x):
-        """Forward pass through the network."""
-        return self.network(x)
-    
     def get_q_values(self, state):
         """Get Q-values for all actions given a state."""
         with torch.no_grad():
             state_tensor = torch.from_numpy(state).float() if isinstance(state, np.ndarray) else state.float()
-            return self.forward(state_tensor).numpy()
+            return self.network(state_tensor).numpy()
     
     def adapt_dimensions(self, new_state_dim, new_action_dim):
+        
         """
         Adapt the network to new input/output dimensions while preserving hidden weights.
         This method modifies the network in-place.
@@ -612,98 +612,12 @@ class EfficientQNetwork(nn.Module):
         self.action_dim = new_action_dim
         
         return self
-
-
-class FlexibleQNetwork(nn.Module):
-    """
-    Flexible Neural Network that can adapt input/output dimensions while preserving hidden weights.
-    
-    This network uses a slightly larger architecture than EfficientQNetwork for better
-    learning capacity, but still optimized for speed.
-    
-    Architecture: Linear -> LayerNorm -> ReLU -> Linear -> ReLU -> Linear
-    """
-    
-    def __init__(self, state_dim, action_dim):
-        super(FlexibleQNetwork, self).__init__()
-        
-        self.state_dim = state_dim
-        self.action_dim = action_dim
-        
-        # Balanced architecture: moderate size with LayerNorm for stability
-        self.input_layer = nn.Linear(state_dim, 128)
-        self.ln1 = nn.LayerNorm(128)
-        self.hidden = nn.Linear(128, 64)
-        self.output_layer = nn.Linear(64, action_dim)
-        
-        # Initialize weights
-        self._init_weights()
-    
-    def _init_weights(self):
-        """Initialize network weights using Xavier initialization."""
-        for layer in [self.input_layer, self.hidden, self.output_layer]:
-            nn.init.xavier_uniform_(layer.weight)
-            nn.init.zeros_(layer.bias)
-    
-    def forward(self, x):
-        """Forward pass through the network."""
-        x = self.input_layer(x)
-        x = self.ln1(x)
-        x = torch.relu(x)
-        x = self.hidden(x)
-        x = torch.relu(x)
-        x = self.output_layer(x)
-        return x
-    
-    def get_q_values(self, state):
-        """Get Q-values for all actions given a state."""
-        with torch.no_grad():
-            state_tensor = torch.from_numpy(state).float() if isinstance(state, np.ndarray) else state.float()
-            return self.forward(state_tensor).numpy()
-    
-    def adapt_dimensions(self, new_state_dim, new_action_dim):
-        """
-        Adapt the network to new input/output dimensions while preserving hidden weights.
-        """
-        if new_state_dim == self.state_dim and new_action_dim == self.action_dim:
-            return self
-        
-        # Create new input layer
-        new_input = nn.Linear(new_state_dim, 128)
-        with torch.no_grad():
-            min_state = min(self.state_dim, new_state_dim)
-            new_input.weight[:, :min_state] = self.input_layer.weight[:, :min_state]
-            new_input.bias[:] = self.input_layer.bias[:]
-            if new_state_dim > self.state_dim:
-                nn.init.xavier_uniform_(new_input.weight[:, self.state_dim:])
-        
-        # Create new output layer
-        new_output = nn.Linear(64, new_action_dim)
-        with torch.no_grad():
-            min_action = min(self.action_dim, new_action_dim)
-            new_output.weight[:min_action, :] = self.output_layer.weight[:min_action, :]
-            new_output.bias[:min_action] = self.output_layer.bias[:min_action]
-            if new_action_dim > self.action_dim:
-                nn.init.xavier_uniform_(new_output.weight[self.action_dim:, :])
-                nn.init.zeros_(new_output.bias[self.action_dim:])
-        
-        # Replace layers
-        self.input_layer = new_input
-        self.output_layer = new_output
-        
-        # Update dimensions
-        self.state_dim = new_state_dim
-        self.action_dim = new_action_dim
-        
-        return self
-
-
 class LearningProcess:
 
     """
     Q-learning implementation supporting both neural network and tabular approaches.
 
-    State: segment angles (N values for N segments)
+    States:  segment angles (N values for N segments)
     Actions: open/close/hold for each segment = 3*N actions (+ add/remove if variable = 2 more)
     
     Q-learning update: Q(s,a) = Q(s,a) + learning_rate * (target - Q(s,a))
@@ -722,13 +636,14 @@ class LearningProcess:
         self.state_dim  = state_dim   # Number of segments (state = N segment angles)
         self.action_dim = action_dim  # Number of actions = 3*N (+ 2 if variable segments)
 
-        # Whether to use or not a neural network
+        # Whether to use or not a neural network (specified in the creature file)
         self.use_neural_network = use_nn
 
         # If yes, initializes the Neural Network and use ADAM as optimizer
         if use_nn:
-            # Use EfficientQNetwork for faster training
-            self.model = EfficientQNetwork(state_dim, action_dim)
+            
+            # Use QNetwork for training
+            self.model     = QNetwork(state_dim, action_dim)
             self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate_nn)
 
         # Otherwise, initializes the Tabular model
@@ -752,6 +667,7 @@ class LearningProcess:
         self.epsilon_min = epsilon_min
 
     def update_dimensions(self, new_state_dim, new_action_dim):
+        
         """Update model dimensions when segment count changes.
         
         IMPORTANT: 
@@ -762,32 +678,33 @@ class LearningProcess:
         if new_state_dim == self.state_dim and new_action_dim == self.action_dim:
             return  # No change needed
         
-        old_state_dim = self.state_dim
+        old_state_dim  = self.state_dim
         old_action_dim = self.action_dim
         
         # Update dimensions
-        self.state_dim = new_state_dim
+        self.state_dim  = new_state_dim
         self.action_dim = new_action_dim
         
         if self.use_neural_network:
-            # Use adapt_dimensions to preserve hidden weights
-            self.model.adapt_dimensions(new_state_dim, new_action_dim)
-            # Recreate optimizer with new parameters
-            self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate_nn)
+            self.model.adapt_dimensions(new_state_dim, new_action_dim)                     # Use adapt_dimensions to preserve hidden weights
+            self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate_nn) # Recreate optimizer with new parameters
+            
         else:
             # For tabular Q-learning, preserve existing Q-values
             old_q_table = self.model.q_table.copy()
-            self.model = QTabular(new_state_dim, new_action_dim, learning_rate=self.learning_rate_tabular)
+            self.model  = QTabular(new_state_dim, new_action_dim, learning_rate=self.learning_rate_tabular)
             
             # Copy over Q-values for states that are still valid
             for state_key, q_values in old_q_table.items():
-                # Handle state dimension change
+                
+                # Segment added - pad state with 0
                 if new_state_dim > old_state_dim:
-                    # Segment added - pad state with 0
                     new_state_key = state_key + (0.0,) * (new_state_dim - old_state_dim)
+                
+                # Segment removed - truncate state   
                 elif new_state_dim < old_state_dim:
-                    # Segment removed - truncate state
                     new_state_key = state_key[:new_state_dim]
+                    
                 else:
                     new_state_key = state_key
                 
@@ -799,6 +716,7 @@ class LearningProcess:
                 self.model.q_table[new_state_key] = new_q
 
     def update_q_values(self, state, action, cost, next_state):
+        
         """Update Q-values based on experience.
 
            The formula is: Q(S,A) = Q(S,A) + learning_rate * [ (C + gamma * min_A' Q(S',A') ) - Q(S,A) ]
@@ -832,7 +750,7 @@ class LearningProcess:
         else:
             q_next = self.model.get_q_values(next_state)                          # Retrieve Q-values for next state
             target = cost + self.gamma * np.min(q_next)                           # Compute target = C + gamma * min_A' Q(S',A')
-            self.model.update_q_values(state, action, target)                     # Update Q-table
+            self.model.update_q_value(state, action, target)                      # Update Q-table
 
     def calculate_reward(self, creature, energy_cost):
         """Calculate reward based on creature state."""
@@ -886,6 +804,7 @@ class LearningProcess:
     
     def get_model_state(self):
         """Get current model state for checkpointing."""
+        
         if self.use_neural_network:
             return self.model.state_dict()
         else:
@@ -893,26 +812,21 @@ class LearningProcess:
             return {k: v.tolist() for k, v in self.model.q_table.items()}
     
     def load_pretrained_model(self, model_path):
-        """
-        Load a pre-trained model from a .pth file (neural network) or .pkl file (tabular).
+        """Load a pre-trained model from a .pth file (neural network) or .pkl file (tabular)."""
         
-        Args:
-            model_path: Path to the model file (.pth for NN, .pkl for tabular)
-        
-        Returns:
-            True if successful, False otherwise
-        """
         if not os.path.exists(model_path):
             print(f"Model file not found: {model_path}")
             return False
         
         try:
+            
             if self.use_neural_network:
                 # Load neural network weights
                 state_dict = torch.load(model_path, map_location='cpu')
                 self.model.load_state_dict(state_dict)
                 print(f"Loaded neural network weights from: {model_path}")
                 print(f"  State dim: {self.model.state_dim}, Action dim: {self.model.action_dim}")
+                
             else:
                 # Load tabular Q-table
                 with open(model_path, 'rb') as f:
@@ -934,22 +848,15 @@ class LearningProcess:
             print(f"Error loading model: {e}")
             return False
 
-
 def load_model_from_export(export_txt_path, learning_process):
+    
     """
     Load a model from an exported .txt file.
-    
     This function parses the export file and loads the model weights.
     For neural networks, it looks for the accompanying .pth file.
     For tabular, it parses the Q-table entries from the text.
-    
-    Args:
-        export_txt_path: Path to the export .txt file
-        learning_process: The LearningProcess instance to load into
-    
-    Returns:
-        True if successful, False otherwise
     """
+    
     if not os.path.exists(export_txt_path):
         print(f"Export file not found: {export_txt_path}")
         return False
@@ -973,6 +880,9 @@ def load_model_from_export(export_txt_path, learning_process):
         else:
             print("Could not determine .pth file path from export filename")
             return False
+        
+    #====================================================================================================
+    
     else:
         # For tabular, parse the Q-table from the text file
         try:
@@ -1019,7 +929,6 @@ def load_model_from_export(export_txt_path, learning_process):
         except Exception as e:
             print(f"Error parsing export file: {e}")
             return False
-
 
 # ==========================================================
 #       TRAINING CHECKPOINT CLASS
@@ -1124,6 +1033,7 @@ class Simulation:
         self.best_trajectory = []            # Best corresponding trajectory
 
     def reset_simu(self):
+        
         """Reset simulation for a new episode.
         
         IMPORTANT: Do NOT reset the learning process here!
@@ -1151,7 +1061,7 @@ class Simulation:
         # Return initial state = segment angles (only active segments)
         return self.creature.segment_angles[:self.creature.num_segments].copy()
 
-    def _apply_action(self, action, prev_num_segments):
+    def _apply_action(self, action):
         """Apply action and return result [success, energy_cost or segment_changed, ...]."""
         
         # Handle add/remove segment actions for variable segments
@@ -1160,32 +1070,34 @@ class Simulation:
             # ADD segment action (second to last action)
             if action == self.learning_process.action_dim - 2:
                 
-                result_add = self.creature.add_segment()  # Try to add a segment
+                # Try to add a segment (result_add = [True, energy_cost] or [False, 0])
+                result_add = self.creature.add_segment()
                 
                 # If it worked...
                 if result_add[0] == True:
-                    segment_changed = ("ADD", self.creature.num_segments)                                                       # Updates the information relative to the change
+                    segment_changed = ("ADD", self.creature.num_segments)                                                      # Updates the information relative to the change
                     energy_cost = result_add[1]                                                                                # Retrieve the energy cost relative to this add
                     self.learning_process.update_dimensions(self.creature.num_segments, (3 * self.creature.num_segments) + 2)  # Update the dimension of the learning process
-                    return [True, segment_changed, energy_cost, True]                                                           # Return with dimensions_changed=True
+                    return [True, energy_cost, segment_changed]                                                                # Return with dimensions_changed=True
                 
                 # Otherwise, don't modify anything
-                return [False]
+                return [False, 0, None]
             
             # REMOVE segment action (last action)
             elif action == self.learning_process.action_dim - 1:
                 
-                result_remove = self.creature.remove_segment()  # Try to remove a segment
+                # Try to remove a segment (result_remove = [True, energy_cost] or [False, 0])
+                result_remove = self.creature.remove_segment()
                 
                 # If it worked...
                 if result_remove[0] == True:
                     segment_changed = ("REMOVE", self.creature.num_segments)                                                  # Updates the information relative to the change
                     energy_cost = result_remove[1]                                                                            # Retrieve the energy cost relative to this remove
                     self.learning_process.update_dimensions(self.creature.num_segments, (3 * self.creature.num_segments) + 2) # Update the dimension of the learning process
-                    return [True, segment_changed, energy_cost, True]                                                          # Return with dimensions_changed=True
+                    return [True, energy_cost, segment_changed]                                                               # Return with dimensions_changed=True
                 
                 # Otherwise, don't modify anything
-                return [False]
+                return [False, 0, None]
             
         #====================================================================================================
         
@@ -1193,98 +1105,92 @@ class Simulation:
         segment_idx = action // 3
         action_type = action % 3
 
-        # If the chosen action is to rotate counter-clockwise (open)...
+        # If the chosen action is to rotate counter-clockwise...
         if action_type == 0:
 
             delta_angle = self.creature.angle_step_rad # Retrieve the angle variation of the creature
 
-            # The creature tries to move a segment based on its current level of energy
+            # The creature tries to move a segment based on its current level of energy (result_move = [True, energy_cost] or [False, 0])
             result_move = self.creature.consume_energy_angle_move(delta_angle)
 
             # If it worked...
             if result_move[0] == True:
 
-                new_angle = self.creature.target_angles[segment_idx] + delta_angle                      # Add this variation to the target angles (angles updated in physics)
-                new_angle_clip = np.clip(new_angle, -self.creature.max_angle, self.creature.max_angle)  # Clip this value to -180, 180 (For example, an angle of 170° + 20° becomes 10°)
-                self.creature.target_angles[segment_idx] = new_angle_clip                               # Update the target angles
+                new_angle = self.creature.target_angles[segment_idx] + delta_angle  # Add this variation to the target angles (angles updated in physics)
+                angle_clipped = np.clip(new_angle, 0, math.radians(360))            # Ensure angles remain within [0, 360] degrees
+                self.creature.target_angles[segment_idx] = angle_clipped            # Update the target angles
 
                 # return the energy cost of this move
-                return [True, result_move[1]]
+                return [True, result_move[1], None]
 
             # Otherwise, don't modify anything
-            return [False]
+            return [False, 0, None]
         
-        #====================================================================================================
-        
-        # If the chosen action is to rotate clockwise (close)...
+        # If the chosen action is to rotate clockwise...
         elif action_type == 1:
 
             delta_angle = self.creature.angle_step_rad # Retrieve the angle variation of the creature
 
-            # The creature tries to move a segment based on its current level of energy
+            # The creature tries to move a segment based on its current level of energy (result_move = [True, energy_cost] or [False, 0])
             result_move = self.creature.consume_energy_angle_move(delta_angle)
 
             # If it worked...
             if result_move[0] == True:
 
-                new_angle = self.creature.target_angles[segment_idx] - delta_angle                      # Subtract this variation from the target angles (angles updated in physics)
-                new_angle_clip = np.clip(new_angle, -self.creature.max_angle, self.creature.max_angle)  # Clip this value to -180, 180
-                self.creature.target_angles[segment_idx] = new_angle_clip                               # Update the target angles
+                new_angle = self.creature.target_angles[segment_idx] - delta_angle  # Add this variation to the target angles (angles updated in physics)
+                angle_clipped = np.clip(new_angle, 0, math.radians(360))            # Ensure angles remain within [0, 360] degrees
+                self.creature.target_angles[segment_idx] = angle_clipped            # Update the target angles
 
                 # return the energy cost of this move
-                return [True, result_move[1]]
+                return [True, result_move[1], None]
 
             # Otherwise, don't modify anything
-            return [False]
+            return [False, 0, None]
         
         #====================================================================================================
         
         # If the chosen action is to hold the current angle...
-        return [True, 0.0]
+        return [True, 0.0, None]
 
     def step(self, action):
         """Execute one simulation step."""
         
-        # Store the current number of segments BEFORE applying the action
-        prev_num_segments = self.creature.num_segments
+        # Apply metabolism (may fail based on the energy level)
+        result_metabolism = self.creature.consume_energy_metabolism() # result_metabolism = [True, energy_cost] or [False, 0]
         
-        result_metabolism = self.creature.consume_energy_metabolism() # Apply metabolism (may fail based on the energy level)
-        result_action = self._apply_action(action, prev_num_segments) # Apply action (may fail based on the energy level)
+        # Apply action (may fail based on the energy level)
+        result_action = self._apply_action(action) # result_action = [True, energy_cost, segment_changed] or [False, 0, None]
         
         # Check if dimensions changed (segment count changed)
-        dimensions_changed = len(result_action) == 4 and result_action[3] == True
+        dimensions_changed = result_action[2] is not None
         
         # Physics update with substeps
         # If the action failed, no thrust is generated, only drag
         for _ in range(self.substeps):
-            thrust, thrust_vectors, drag_force, drag_vectors = self.physics_model.update_physics(
-                self.creature, self.dt / self.substeps)
+            thrust, thrust_vectors, drag_force, drag_vectors = self.physics_model.update_physics(self.creature, self.dt / self.substeps)
         
         # Computes the total energy based on whether the action and metabolism failed or not
         if result_metabolism[0] == False:
             total_energy_cost = 0                                           # If the metabolism failed, the action also failed and the total consumed cost is 0
         elif result_action[0] == False:
             total_energy_cost = result_metabolism[1]                        # If the metabolism worked but the action failed, the total consumed cost is just the metabolism
-        else:
-            if len(result_action) >= 3:                
-                total_energy_cost = result_metabolism[1] + result_action[2] # If both worked and the action was add or remove
-            else:
-                total_energy_cost = result_metabolism[1] + result_action[1] # If both worked and the action was an angular move
+        else:              
+            total_energy_cost = result_metabolism[1] + result_action[1]     # If both worked
         
         # Record current trajectory with thrust and drag vectors
         frame = self.creature.get_trajectory_frame()
         frame['thrust_vectors'] = [v.copy() if isinstance(v, list) else v for v in thrust_vectors]
-        frame['drag_vectors'] = [v.copy() if isinstance(v, list) else v for v in drag_vectors]
-        frame['thrust'] = thrust.tolist() if hasattr(thrust, 'tolist') else list(thrust)
-        frame['drag_force'] = drag_force.tolist() if hasattr(drag_force, 'tolist') else list(drag_force)
+        frame['drag_vectors']   = [v.copy() if isinstance(v, list) else v for v in drag_vectors]
+        frame['thrust']         = thrust.tolist() if hasattr(thrust, 'tolist') else list(thrust)
+        frame['drag_force']     = drag_force.tolist() if hasattr(drag_force, 'tolist') else list(drag_force)
         self.trajectory.append(frame)
         
         # Calculate reward (creature passed directly)
         reward, info = self.learning_process.calculate_reward(self.creature, total_energy_cost)
 
         # Updates the infos
-        info['segment_changed'] = result_action[1] if len(result_action) >= 3 else None
-        info['energy_cost'] = total_energy_cost
+        info['segment_changed']    = result_action[2] if dimensions_changed else None
+        info['energy_cost']        = total_energy_cost
         info['dimensions_changed'] = dimensions_changed
         
         # Ensures that we don't overshoot the maximum number of steps and that the creature still has some energy
@@ -1313,8 +1219,8 @@ class Simulation:
         for ep in range(self.episodes + 1):
 
             # Reset environment and get initial state
-            state = self.reset_simu()
-            epsilon = self.learning_process.get_epsilon(ep, self.episodes)
+            state        = self.reset_simu()
+            epsilon      = self.learning_process.get_epsilon(ep, self.episodes)
             max_distance = 0
             
             # At each step...
@@ -1329,8 +1235,7 @@ class Simulation:
                 # Update the max distance if needed
                 max_distance = max(max_distance, info['distance'])
                 
-                # Always update Q-values - the EfficientQNetwork handles dimension changes
-                # by preserving hidden layer weights
+                # Always update Q-values - the QNetwork handles dimension changes by preserving hidden layer weights
                 self.learning_process.update_q_values(state, action, cost, next_state)
                 
                 # Update the state and break if the creature has no energy left
@@ -1340,7 +1245,7 @@ class Simulation:
             
             # Track best trajectory
             if max_distance > self.best_distance:
-                self.best_distance = max_distance
+                self.best_distance   = max_distance
                 self.best_trajectory = copy.deepcopy(self.trajectory)
             
             # Save checkpoint if the interval fits
@@ -1490,10 +1395,8 @@ def export_results_txt(sim, checkpoints, script_dir):
             f.write("=" * 80 + "\n")
             
             # Determine network type
-            if isinstance(model, EfficientQNetwork):
-                f.write("Network Type: EfficientQNetwork (fast, adaptive)\n")
-            elif isinstance(model, FlexibleQNetwork):
-                f.write("Network Type: FlexibleQNetwork (dimension-adaptive)\n")
+            if isinstance(model, QNetwork):
+                f.write("Network Type: QNetwork (fast, adaptive)\n")
             else:
                 f.write(f"Network Type: {type(model).__name__} (custom)\n")
             
@@ -1506,15 +1409,8 @@ def export_results_txt(sim, checkpoints, script_dir):
             f.write("ARCHITECTURE LAYERS:\n")
             f.write("-" * 40 + "\n")
             
-            if isinstance(model, EfficientQNetwork):
+            if isinstance(model, QNetwork):
                 f.write(f"  Architecture: Linear({model.state_dim} -> 64) -> ReLU -> Linear(64 -> 32) -> ReLU -> Linear(32 -> {model.action_dim})\n")
-            elif isinstance(model, FlexibleQNetwork):
-                f.write(f"  input_layer: Linear({model.state_dim} -> 128)\n")
-                f.write(f"  ln1: LayerNorm(128)\n")
-                f.write(f"  activation: ReLU\n")
-                f.write(f"  hidden: Linear(128 -> 64)\n")
-                f.write(f"  activation: ReLU\n")
-                f.write(f"  output_layer: Linear(64 -> {model.action_dim})\n")
             else:
                 # Generic network
                 f.write("  Network Structure:\n")
@@ -1561,12 +1457,9 @@ def export_results_txt(sim, checkpoints, script_dir):
             f.write("Use the following to reconstruct the network:\n")
             f.write("```python\n")
             f.write("import torch\n")
-            if isinstance(model, EfficientQNetwork):
-                f.write(f"from aquatic_evolution_qlearning_V17 import EfficientQNetwork\n")
-                f.write(f"model = EfficientQNetwork(state_dim={model.state_dim}, action_dim={model.action_dim})\n")
-            elif isinstance(model, FlexibleQNetwork):
-                f.write(f"from aquatic_evolution_qlearning_V17 import FlexibleQNetwork\n")
-                f.write(f"model = FlexibleQNetwork(state_dim={model.state_dim}, action_dim={model.action_dim})\n")
+            if isinstance(model, QNetwork):
+                f.write(f"from aquatic_evolution_qlearning_V17 import QNetwork\n")
+                f.write(f"model = QNetwork(state_dim={model.state_dim}, action_dim={model.action_dim})\n")
             f.write("model.load_state_dict(torch.load('model_weights.pth'))\n")
             f.write("```\n\n")
             
@@ -1620,7 +1513,6 @@ def export_results_txt(sim, checkpoints, script_dir):
     print(f"Training results exported to: {filepath}")
     return filepath
 
-
 def save_simulation(checkpoints, use_nn, target_angle, duration, num_segments, fixed_segments, script_dir):
     """Save simulation results to file."""
 
@@ -1665,7 +1557,6 @@ def save_simulation(checkpoints, use_nn, target_angle, duration, num_segments, f
         print(f"Error saving simulation: {e}")
         return None
 
-
 def list_pretrained_models(script_dir):
     """List available pre-trained models in the Result folder."""
     result_dir = os.path.join(script_dir, "Result")
@@ -1684,7 +1575,6 @@ def list_pretrained_models(script_dir):
             pth_files.append(os.path.join(result_dir, f))  # Q-table pickle files
     
     return sorted(pth_files, reverse=True), sorted(export_files, reverse=True)
-
 
 # ==========================================================
 #       MAIN FUNCTION
@@ -1706,7 +1596,7 @@ def main():
     pth_files, export_files = list_pretrained_models(script_dir)
     
     load_pretrained = False
-    model_path = None
+    model_path      = None
     
     if pth_files or export_files:
         print("\nFound pre-trained models:")

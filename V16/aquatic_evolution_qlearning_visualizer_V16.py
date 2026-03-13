@@ -4,7 +4,6 @@ import math
 import pickle
 import os
 import time
-import copy
 
 # ==========================================================
 # 0. Data Structure
@@ -276,6 +275,8 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
     clock = pygame.time.Clock()
     
     target_rad = math.radians(target_angle)
+    # Direction in WORLD coordinates (Y-up, CCW angles from X-axis)
+    # The coordinate conversion (cam_y - world_y) handles the Y flip for drawing
     direction = np.array([math.cos(target_rad), math.sin(target_rad)])
     
     creature_config = parse_creature_config("Creature.txt")
@@ -442,7 +443,7 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
         # ========================================
         # Draw X-axis (GREY horizontal line)
         # ========================================
-        x_axis_y_screen = int((0 - cam_y) * zoom + 280)  # Y=0 in world coords
+        x_axis_y_screen = int((cam_y - 0) * zoom + 280)  # Y=0 in world coords (flipped for pygame)
         pygame.draw.line(screen, (100, 100, 100), (0, x_axis_y_screen), (800, x_axis_y_screen), 2)
         
         # X-axis label
@@ -455,8 +456,8 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
         line_length = 2000  # Long line to span the screen
         line_start = start - direction * line_length
         line_end = start + direction * line_length
-        p1 = (int((line_start[0]-cam_x)*zoom+400), int((line_start[1]-cam_y)*zoom+280))
-        p2 = (int((line_end[0]-cam_x)*zoom+400), int((line_end[1]-cam_y)*zoom+280))
+        p1 = (int((line_start[0]-cam_x)*zoom+400), int((cam_y-line_start[1])*zoom+280))
+        p2 = (int((line_end[0]-cam_x)*zoom+400), int((cam_y-line_end[1])*zoom+280))
         
         # Teal color for target direction
         teal_color = (0, 180, 180)
@@ -464,17 +465,20 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
         pygame.draw.line(screen, teal_color, p1, p2, 2)  # Teal main line
         
         # Draw arrow at the target direction (from origin pointing in direction)
-        arrow_pos = start + direction * 50  # Position arrow near origin
+        arrow_pos = start + direction * 50  # Position arrow near origin (world coords)
         ax = int((arrow_pos[0]-cam_x)*zoom+400)
-        ay = int((arrow_pos[1]-cam_y)*zoom+280)
-        perp = np.array([-direction[1], direction[0]])
+        ay = int((cam_y-arrow_pos[1])*zoom+280)
+        
+        # Convert direction to screen space (flip Y) for arrow drawing
+        dir_screen = np.array([direction[0], -direction[1]])
+        perp_screen = np.array([-dir_screen[1], dir_screen[0]])
         sz = int(15 * zoom / 15)
         
-        # Arrow pointing in target direction
+        # Arrow pointing in target direction (screen coords)
         pts = [
-            (ax + int(direction[0]*sz*1.5), ay + int(direction[1]*sz*1.5)),  # Tip
-            (ax - int(direction[0]*sz*0.5) + int(perp[0]*sz), ay - int(direction[1]*sz*0.5) + int(perp[1]*sz)),
-            (ax - int(direction[0]*sz*0.5) - int(perp[0]*sz), ay - int(direction[1]*sz*0.5) - int(perp[1]*sz))
+            (ax + int(dir_screen[0]*sz*1.5), ay + int(dir_screen[1]*sz*1.5)),  # Tip
+            (ax - int(dir_screen[0]*sz*0.5) + int(perp_screen[0]*sz), ay - int(dir_screen[1]*sz*0.5) + int(perp_screen[1]*sz)),
+            (ax - int(dir_screen[0]*sz*0.5) - int(perp_screen[0]*sz), ay - int(dir_screen[1]*sz*0.5) - int(perp_screen[1]*sz))
         ]
         pygame.draw.polygon(screen, teal_color, pts)
         pygame.draw.polygon(screen, (0, 220, 220), pts, 2)  # Brighter outline
@@ -482,14 +486,14 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
         # Label for target direction
         label_pos = start + direction * 80
         label_x = int((label_pos[0]-cam_x)*zoom+400)
-        label_y = int((label_pos[1]-cam_y)*zoom+280)
+        label_y = int((cam_y-label_pos[1])*zoom+280)
         screen.blit(tiny.render(f"Target: {target_angle:.0f}°", True, teal_color), (label_x + 10, label_y - 8))
         
         # ========================================
         # Draw start position marker
         # ========================================
         cx = int((0-cam_x)*zoom+400)
-        cy = int((0-cam_y)*zoom+280)
+        cy = int((cam_y-0)*zoom+280)
         sz = int(10 * zoom / 15)
         pygame.draw.line(screen, (255, 50, 50), (cx-sz, cy), (cx+sz, cy), 4)
         pygame.draw.line(screen, (255, 50, 50), (cx, cy-sz), (cx, cy+sz), 4)
@@ -505,7 +509,7 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
                 if not isinstance(p, np.ndarray):
                     p = np.array(p)
                 px = int((p[0]-cam_x)*zoom+400)
-                py = int((p[1]-cam_y)*zoom+280)
+                py = int((cam_y-p[1])*zoom+280)
                 pts.append((px, py))
             
             if len(pts) > 1:
@@ -541,8 +545,8 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
             
             # Draw segments
             for i in range(len(joints) - 1):
-                p1 = (int((joints[i][0]-cam_x)*zoom+400), int((joints[i][1]-cam_y)*zoom+280))
-                p2 = (int((joints[i+1][0]-cam_x)*zoom+400), int((joints[i+1][1]-cam_y)*zoom+280))
+                p1 = (int((joints[i][0]-cam_x)*zoom+400), int((cam_y-joints[i][1])*zoom+280))
+                p2 = (int((joints[i+1][0]-cam_x)*zoom+400), int((cam_y-joints[i+1][1])*zoom+280))
                 th = max(3, int(10 * zoom / 15))
                 
                 if i < len(seg_angles):
@@ -561,16 +565,16 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
                 head_angle = base_orient + (seg_angles[0] if len(seg_angles) > 0 else 0)
                 head_dir = np.array([math.cos(head_angle), math.sin(head_angle)])
                 
-                perp = np.array([-head_dir[1], head_dir[0]])
-                hs = (int((joints[0][0]-cam_x)*zoom+400), int((joints[0][1]-cam_y)*zoom+280))
-                off = head_dir * int(5*zoom/15)
-                spread = perp * int(4*zoom/15)
+                # Convert to screen space (Y flipped)
+                off = np.array([head_dir[0], -head_dir[1]]) * int(5*zoom/15)
+                perp_screen = np.array([head_dir[1], head_dir[0]]) * int(4*zoom/15)
+                hs = (int((joints[0][0]-cam_x)*zoom+400), int((cam_y-joints[0][1])*zoom+280))
                 er = max(2, int(4*zoom/15))
                 pr = max(1, int(2*zoom/15))
                 
                 for sgn in [-1, 1]:
-                    ex = int(hs[0] + off[0] + spread[0]*sgn)
-                    ey = int(hs[1] + off[1] + spread[1]*sgn)
+                    ex = int(hs[0] + off[0] + perp_screen[0]*sgn)
+                    ey = int(hs[1] + off[1] + perp_screen[1]*sgn)
                     pygame.draw.circle(screen, (255, 255, 255), (ex, ey), er)
                     pygame.draw.circle(screen, (20, 20, 40), (ex, ey), pr)
             
@@ -585,7 +589,7 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
             if not isinstance(total_drag, np.ndarray):
                 total_drag = np.array(total_drag) if total_drag else np.zeros(2)
             
-            VECTOR_SCALE_FACTOR = 100
+            VECTOR_SCALE_FACTOR = 10
             vector_scale = VECTOR_SCALE_FACTOR * zoom / 15
             
             # Draw thrust vectors (CYAN)
@@ -594,24 +598,25 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
                     if i < len(joints):
                         joint_pos = joints[i]
                         jx = int((joint_pos[0] - cam_x) * zoom + 400)
-                        jy = int((joint_pos[1] - cam_y) * zoom + 280)
+                        jy = int((cam_y - joint_pos[1]) * zoom + 280)
                         
                         tv_arr = np.array(tv) if not isinstance(tv, np.ndarray) else tv
                         tv_mag = np.linalg.norm(tv_arr)
                         
                         if tv_mag > 0.01:
                             end_x = jx + int(tv_arr[0] * vector_scale)
-                            end_y = jy + int(tv_arr[1] * vector_scale)
+                            end_y = jy - int(tv_arr[1] * vector_scale)  # Negate Y for pygame coords
                             pygame.draw.line(screen, (0, 255, 255), (jx, jy), (end_x, end_y), 3)
                             
                             if tv_mag > 0.1:
                                 vec_norm = tv_arr / tv_mag
-                                perp = np.array([-vec_norm[1], vec_norm[0]])
+                                # Screen space perpendicular (Y flipped): (vy, vx)
+                                perp = np.array([vec_norm[1], vec_norm[0]])
                                 arrow_size = 6
                                 arrow_x = end_x - int(vec_norm[0] * arrow_size) + int(perp[0] * arrow_size * 0.5)
-                                arrow_y = end_y - int(vec_norm[1] * arrow_size) + int(perp[1] * arrow_size * 0.5)
+                                arrow_y = end_y + int(vec_norm[1] * arrow_size) + int(perp[1] * arrow_size * 0.5)
                                 arrow_x2 = end_x - int(vec_norm[0] * arrow_size) - int(perp[0] * arrow_size * 0.5)
-                                arrow_y2 = end_y - int(vec_norm[1] * arrow_size) - int(perp[1] * arrow_size * 0.5)
+                                arrow_y2 = end_y + int(vec_norm[1] * arrow_size) - int(perp[1] * arrow_size * 0.5)
                                 pygame.draw.polygon(screen, (0, 255, 255), [(end_x, end_y), (arrow_x, arrow_y), (arrow_x2, arrow_y2)])
             
             # Total thrust on head
@@ -619,21 +624,22 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
                 thrust_mag = np.linalg.norm(total_thrust)
                 head_pos = joints[0]
                 hx = int((head_pos[0] - cam_x) * zoom + 400)
-                hy = int((head_pos[1] - cam_y) * zoom + 280)
+                hy = int((cam_y - head_pos[1]) * zoom + 280)
                 
                 end_x = hx + int(total_thrust[0] * vector_scale * 2)
-                end_y = hy + int(total_thrust[1] * vector_scale * 2)
+                end_y = hy - int(total_thrust[1] * vector_scale * 2)  # Negate Y for pygame coords
                 
                 pygame.draw.line(screen, (0, 200, 255), (hx, hy), (end_x, end_y), 4)
                 
                 if thrust_mag > 0.1:
                     vec_norm = total_thrust / thrust_mag
-                    perp = np.array([-vec_norm[1], vec_norm[0]])
+                    # Screen space perpendicular (Y flipped): (vy, vx)
+                    perp = np.array([vec_norm[1], vec_norm[0]])
                     arrow_size = 10
                     arrow_x = end_x - int(vec_norm[0] * arrow_size) + int(perp[0] * arrow_size * 0.5)
-                    arrow_y = end_y - int(vec_norm[1] * arrow_size) + int(perp[1] * arrow_size * 0.5)
+                    arrow_y = end_y + int(vec_norm[1] * arrow_size) + int(perp[1] * arrow_size * 0.5)
                     arrow_x2 = end_x - int(vec_norm[0] * arrow_size) - int(perp[0] * arrow_size * 0.5)
-                    arrow_y2 = end_y - int(vec_norm[1] * arrow_size) - int(perp[1] * arrow_size * 0.5)
+                    arrow_y2 = end_y + int(vec_norm[1] * arrow_size) - int(perp[1] * arrow_size * 0.5)
                     pygame.draw.polygon(screen, (0, 200, 255), [(end_x, end_y), (arrow_x, arrow_y), (arrow_x2, arrow_y2)])
             
             # Draw drag vectors (ORANGE)
@@ -642,24 +648,25 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
                     if i < len(joints):
                         joint_pos = joints[i]
                         jx = int((joint_pos[0] - cam_x) * zoom + 400)
-                        jy = int((joint_pos[1] - cam_y) * zoom + 280)
+                        jy = int((cam_y - joint_pos[1]) * zoom + 280)
                         
                         dv_arr = np.array(dv) if not isinstance(dv, np.ndarray) else dv
                         dv_mag = np.linalg.norm(dv_arr)
                         
                         if dv_mag > 0.01:
                             end_x = jx + int(dv_arr[0] * vector_scale)
-                            end_y = jy + int(dv_arr[1] * vector_scale)
+                            end_y = jy - int(dv_arr[1] * vector_scale)  # Negate Y for pygame coords
                             pygame.draw.line(screen, (255, 165, 0), (jx, jy), (end_x, end_y), 3)
                             
                             if dv_mag > 0.1:
                                 vec_norm = dv_arr / dv_mag
-                                perp = np.array([-vec_norm[1], vec_norm[0]])
+                                # Screen space perpendicular (Y flipped): (vy, vx)
+                                perp = np.array([vec_norm[1], vec_norm[0]])
                                 arrow_size = 6
                                 arrow_x = end_x - int(vec_norm[0] * arrow_size) + int(perp[0] * arrow_size * 0.5)
-                                arrow_y = end_y - int(vec_norm[1] * arrow_size) + int(perp[1] * arrow_size * 0.5)
+                                arrow_y = end_y + int(vec_norm[1] * arrow_size) + int(perp[1] * arrow_size * 0.5)
                                 arrow_x2 = end_x - int(vec_norm[0] * arrow_size) - int(perp[0] * arrow_size * 0.5)
-                                arrow_y2 = end_y - int(vec_norm[1] * arrow_size) - int(perp[1] * arrow_size * 0.5)
+                                arrow_y2 = end_y + int(vec_norm[1] * arrow_size) - int(perp[1] * arrow_size * 0.5)
                                 pygame.draw.polygon(screen, (255, 165, 0), [(end_x, end_y), (arrow_x, arrow_y), (arrow_x2, arrow_y2)])
             
             # Total drag on head
@@ -667,21 +674,22 @@ def visualize(checkpoints, target_angle=0.0, duration=10.0):
                 drag_mag = np.linalg.norm(total_drag)
                 head_pos = joints[0]
                 hx = int((head_pos[0] - cam_x) * zoom + 400)
-                hy = int((head_pos[1] - cam_y) * zoom + 280)
+                hy = int((cam_y - head_pos[1]) * zoom + 280)
                 
                 end_x = hx + int(total_drag[0] * vector_scale * 2)
-                end_y = hy + int(total_drag[1] * vector_scale * 2)
+                end_y = hy - int(total_drag[1] * vector_scale * 2)  # Negate Y for pygame coords
                 
                 pygame.draw.line(screen, (255, 100, 50), (hx, hy), (end_x, end_y), 4)
                 
                 if drag_mag > 0.1:
                     vec_norm = total_drag / drag_mag
-                    perp = np.array([-vec_norm[1], vec_norm[0]])
+                    # Screen space perpendicular (Y flipped): (vy, vx)
+                    perp = np.array([vec_norm[1], vec_norm[0]])
                     arrow_size = 10
                     arrow_x = end_x - int(vec_norm[0] * arrow_size) + int(perp[0] * arrow_size * 0.5)
-                    arrow_y = end_y - int(vec_norm[1] * arrow_size) + int(perp[1] * arrow_size * 0.5)
+                    arrow_y = end_y + int(vec_norm[1] * arrow_size) + int(perp[1] * arrow_size * 0.5)
                     arrow_x2 = end_x - int(vec_norm[0] * arrow_size) - int(perp[0] * arrow_size * 0.5)
-                    arrow_y2 = end_y - int(vec_norm[1] * arrow_size) - int(perp[1] * arrow_size * 0.5)
+                    arrow_y2 = end_y + int(vec_norm[1] * arrow_size) - int(perp[1] * arrow_size * 0.5)
                     pygame.draw.polygon(screen, (255, 100, 50), [(end_x, end_y), (arrow_x, arrow_y), (arrow_x2, arrow_y2)])
         
         # ========================================

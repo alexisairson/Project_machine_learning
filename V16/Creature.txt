@@ -12,7 +12,7 @@ size_penalty_factor = 0.25
 
 # Whether the number of segments is fixed or not
 # [DEFAULT = true]
-fixed_segments = true
+fixed_segments = false
 
 # Number of body segments (if fixed_segments is true)
 # [DEFAULT = 3]
@@ -28,11 +28,7 @@ max_segments = 10
 
 # Target direction for movement in degrees
 # [DEFAULT = 0]
-target_angle_deg = 30
-
-# Maximum angle magnitude in degrees
-# [DEFAULT = 180]
-max_angle_deg = 360
+target_angle_deg = 40
 
 # Use neural network for learning (true is neural network, false is tabular)
 # [DEFAULT = false]
@@ -40,7 +36,7 @@ use_nn = false
 
 # Angle difference for every angular movement
 # [DEFAULT = 10]
-angle_step = 10
+angle_step = 60
 
 # ==========================================================
 # ENERGY SYSTEM PARAMETERS

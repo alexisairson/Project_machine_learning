@@ -25,7 +25,7 @@ gamma = 0.9
 # Minimum exploration rate (epsilon)
 # The epsilon-greedy strategy decays from 1.0 to this value
 # [DEFAULT = 0.05]
-epsilon_min = 0.05
+epsilon_min = 0.3
 
 # Coefficients for the different terms in the reward function
 
